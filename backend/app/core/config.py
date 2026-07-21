@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     app_env: Literal["development", "test", "production"] = "development"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     app_timezone: str = "Asia/Shanghai"
+    database_url: str
+    test_database_url: str | None = None
 
     @field_validator("app_timezone")
     @classmethod

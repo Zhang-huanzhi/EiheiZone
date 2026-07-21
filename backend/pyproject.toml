@@ -3,8 +3,11 @@ name = "backend"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.18.5",
     "fastapi[standard]>=0.139.2",
+    "psycopg[binary]>=3.3.4",
     "pydantic-settings>=2.14.2",
+    "sqlalchemy>=2.0.51",
     "tzdata>=2026.3",
 ]
 
@@ -13,3 +16,7 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.15.22",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
