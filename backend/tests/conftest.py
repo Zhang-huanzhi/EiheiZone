@@ -1,11 +1,14 @@
 from collections.abc import Generator
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
+from app.db.session import get_db
+from app.main import app
 
 
 TEST_DATABASE_NAME = "eiheizone_test"
@@ -42,3 +45,18 @@ def test_session(test_engine: Engine) -> Generator[Session]:
     finally:
         session.rollback()
         session.close()
+
+
+@pytest.fixture
+def client(test_session: Session) -> Generator[TestClient]:
+    """Provide the main API app with its database dependency bound to the test Session."""
+
+    def override_get_db() -> Generator[Session]:
+        yield test_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        app.dependency_overrides.pop(get_db, None)
