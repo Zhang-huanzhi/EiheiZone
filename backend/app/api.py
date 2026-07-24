@@ -3,9 +3,11 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.modules.auth.router import router as auth_router
 
 
 router = APIRouter()
+router.include_router(auth_router)
 
 
 @router.get("/health")

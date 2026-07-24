@@ -3,7 +3,7 @@ from collections.abc import Generator
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine, make_url
+from sqlalchemy.engine import Connection, Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
@@ -39,12 +39,16 @@ def test_engine() -> Generator[Engine]:
 
 @pytest.fixture
 def test_session(test_engine: Engine) -> Generator[Session]:
-    session = sessionmaker(bind=test_engine, autoflush=False)()
+    connection: Connection = test_engine.connect()
+    transaction = connection.begin()
+    session = sessionmaker(bind=connection, autoflush=False, expire_on_commit=False)()
     try:
         yield session
     finally:
-        session.rollback()
         session.close()
+        if transaction.is_active:
+            transaction.rollback()
+        connection.close()
 
 
 @pytest.fixture

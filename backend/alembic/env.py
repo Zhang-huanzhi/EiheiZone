@@ -5,6 +5,7 @@ from sqlalchemy import create_engine, pool
 
 from app.core.config import get_settings
 from app.db.base import Base
+import app.modules.auth.models  # noqa: F401  # Register Auth tables with Base.metadata.
 
 
 config = context.config
