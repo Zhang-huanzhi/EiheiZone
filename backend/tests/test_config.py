@@ -11,6 +11,7 @@ def make_settings(**overrides: object) -> Settings:
     values: dict[str, object] = {
         "database_url": DATABASE_URL,
         "test_database_url": DATABASE_URL.replace("eiheizone_dev", "eiheizone_test"),
+        "csrf_secret": "test-csrf-secret-with-at-least-thirty-two-characters",
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)
@@ -24,6 +25,18 @@ def test_development_auth_defaults_are_local_safe() -> None:
     assert settings.session_ttl_days == 30
     assert settings.session_cookie_name == "pfp_session"
     assert settings.csrf_cookie_name == "pfp_csrf"
+
+
+def test_missing_csrf_secret_is_rejected_at_startup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("CSRF_SECRET")
+    with pytest.raises(ValidationError, match="csrf_secret"):
+        Settings(
+            _env_file=None,
+            database_url=DATABASE_URL,
+            test_database_url=DATABASE_URL.replace("eiheizone_dev", "eiheizone_test"),
+        )
 
 
 @pytest.mark.parametrize(
@@ -89,6 +102,8 @@ def test_production_accepts_secure_cookie_https_origin_and_csrf_secret() -> None
         ("csrf_token_ttl_seconds", 0),
     ],
 )
-def test_auth_security_settings_reject_invalid_values(field: str, value: object) -> None:
+def test_auth_security_settings_reject_invalid_values(
+    field: str, value: object
+) -> None:
     with pytest.raises(ValidationError):
         make_settings(**{field: value})

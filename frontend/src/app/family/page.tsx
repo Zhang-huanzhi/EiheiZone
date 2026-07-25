@@ -4,7 +4,7 @@ export default function FamilyPage() {
   return (
     <EmptyState
       title="当前还没有家庭内容"
-      description="登录验证和家庭功能将在后续任务实现。"
+      description="家庭内容将在后续任务中逐步加入。"
     />
   );
 }

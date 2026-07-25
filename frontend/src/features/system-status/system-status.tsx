@@ -68,7 +68,7 @@ export function SystemStatus() {
   if (state.kind === "error") {
     return (
       <ErrorState
-        message={state.error.message}
+        message="暂时无法连接后端服务。"
         requestId={state.error.requestId}
         onRetry={() => setRequestVersion((version) => version + 1)}
       />

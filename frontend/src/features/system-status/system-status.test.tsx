@@ -44,7 +44,7 @@ describe("SystemStatus", () => {
       new ApiRequestError({
         status: 503,
         code: "SERVICE_UNAVAILABLE",
-        message: "暂时无法连接后端服务。",
+        message: "Internal upstream detail",
         requestId: "request-503",
       }),
     );
@@ -54,6 +54,7 @@ describe("SystemStatus", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "暂时无法连接后端服务。",
     );
+    expect(screen.queryByText("Internal upstream detail")).not.toBeInTheDocument();
     expect(screen.getByText("请求编号：request-503")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "重试" })).toBeInTheDocument();
   });

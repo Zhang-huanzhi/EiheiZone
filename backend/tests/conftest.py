@@ -1,10 +1,16 @@
 from collections.abc import Generator
+import os
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection, Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
+
+os.environ.setdefault(
+    "CSRF_SECRET",
+    "test-csrf-secret-with-at-least-thirty-two-characters",
+)
 
 from app.core.config import get_settings
 from app.db.session import get_db

@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     database_url: str
     test_database_url: str | None = None
     app_origin: str = "http://localhost:3000"
-    csrf_secret: str | None = None
+    csrf_secret: str
     cookie_secure: bool = False
     session_ttl_days: int = 30
     csrf_token_ttl_seconds: int = 3600
@@ -68,8 +68,8 @@ class Settings(BaseSettings):
 
     @field_validator("csrf_secret")
     @classmethod
-    def validate_csrf_secret(cls, value: str | None) -> str | None:
-        if value is not None and len(value) < 32:
+    def validate_csrf_secret(cls, value: str) -> str:
+        if len(value) < 32:
             message = "CSRF_SECRET must contain at least 32 characters"
             raise ValueError(message)
         return value
@@ -78,7 +78,9 @@ class Settings(BaseSettings):
     @classmethod
     def validate_session_ttl_days(cls, value: int) -> int:
         if value != 30:
-            message = "SESSION_TTL_DAYS must be 30 because V1 does not use sliding sessions"
+            message = (
+                "SESSION_TTL_DAYS must be 30 because V1 does not use sliding sessions"
+            )
             raise ValueError(message)
         return value
 
@@ -95,7 +97,7 @@ class Settings(BaseSettings):
         if self.app_env != "production":
             return self
 
-        if self.csrf_secret is None or self.csrf_secret.startswith("replace-with-"):
+        if self.csrf_secret.startswith("replace-with-"):
             message = "A real CSRF_SECRET is required in production"
             raise ValueError(message)
         if not self.cookie_secure:
