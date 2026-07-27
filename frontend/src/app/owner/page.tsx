@@ -1,10 +1,16 @@
+import Link from "next/link";
+
 import { EmptyState } from "@/components/feedback/empty-state";
+import { buttonVariants } from "@/components/ui/button";
 
 export default function OwnerPage() {
   return (
-    <EmptyState
-      title="当前还没有管理内容"
-      description="内容管理功能将在后续任务中逐步加入。"
-    />
+    <section className="space-y-4">
+      <EmptyState
+        title="开始管理内容"
+        description="现在可以创建、编辑和删除近况分享。"
+      />
+      <Link className={buttonVariants()} href="/owner/posts">管理近况</Link>
+    </section>
   );
 }

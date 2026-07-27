@@ -4,10 +4,14 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.modules.auth.router import router as auth_router
+from app.modules.posts.router import public_router as public_posts_router
+from app.modules.posts.router import router as posts_router
 
 
 router = APIRouter()
 router.include_router(auth_router)
+router.include_router(public_posts_router)
+router.include_router(posts_router)
 
 
 @router.get("/health")

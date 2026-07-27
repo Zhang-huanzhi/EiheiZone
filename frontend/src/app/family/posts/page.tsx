@@ -1,0 +1,45 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+import { buttonVariants } from "@/components/ui/button";
+import { PostList } from "@/features/posts/post-display";
+import { getServerPosts } from "@/features/posts/post-server";
+import { ApiRequestError } from "@/lib/api/client";
+
+type FamilyPostsPageProps = {
+  searchParams: Promise<{ offset?: string }>;
+};
+
+export default async function FamilyPostsPage({ searchParams }: FamilyPostsPageProps) {
+  const { offset } = await searchParams;
+  const page = await loadFamilyPosts(parseOffset(offset));
+
+  return (
+    <section className="space-y-6">
+      <header className="space-y-2">
+        <h2 className="text-2xl font-semibold">近况分享</h2>
+        <p className="text-muted-foreground">查看公开和仅家人可见的近况。</p>
+      </header>
+      <PostList detailBasePath="/family/posts" listPath="/family/posts" page={page} showVisibility />
+      <Link className={buttonVariants({ variant: "outline" })} href="/family">
+        返回家庭首页
+      </Link>
+    </section>
+  );
+}
+
+async function loadFamilyPosts(offset: number) {
+  try {
+    return await getServerPosts({ offset });
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 401) {
+      redirect("/login?next=%2Ffamily%2Fposts");
+    }
+    throw error;
+  }
+}
+
+function parseOffset(value: string | undefined): number {
+  const offset = Number(value);
+  return Number.isSafeInteger(offset) && offset >= 0 ? offset : 0;
+}
