@@ -8,9 +8,12 @@ export default function OwnerPage() {
     <section className="space-y-4">
       <EmptyState
         title="开始管理内容"
-        description="现在可以创建、编辑和删除近况分享。"
+        description="现在可以管理近况，并回答家人提出的问题。"
       />
-      <Link className={buttonVariants()} href="/owner/posts">管理近况</Link>
+      <div className="flex flex-wrap gap-3">
+        <Link className={buttonVariants()} href="/owner/posts">管理近况</Link>
+        <Link className={buttonVariants({ variant: "outline" })} href="/owner/qas">管理问答</Link>
+      </div>
     </section>
   );
 }

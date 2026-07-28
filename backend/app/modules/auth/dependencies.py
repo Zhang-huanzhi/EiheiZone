@@ -55,6 +55,12 @@ def require_family_access(current_user: CurrentUser = Depends(get_current_user))
     return current_user
 
 
+def require_family(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+    if current_user.user.role is not UserRole.FAMILY:
+        raise AppError(status_code=403, code="FORBIDDEN", message="Family access is required")
+    return current_user
+
+
 def require_owner(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
     if current_user.user.role is not UserRole.OWNER:
         raise AppError(status_code=403, code="FORBIDDEN", message="Owner access is required")
