@@ -1,7 +1,6 @@
-import Link from "next/link";
+import { BackLink } from "@/components/navigation/back-link";
 import { notFound, redirect } from "next/navigation";
 
-import { buttonVariants } from "@/components/ui/button";
 import { QADetail } from "@/features/qas/qa-display";
 import { getServerQA } from "@/features/qas/qa-server";
 import { ApiRequestError } from "@/lib/api/client";
@@ -16,8 +15,8 @@ export default async function FamilyQADetailPage({ params }: FamilyQADetailPageP
 
   return (
     <section className="space-y-6">
+      <BackLink href="/family/qas">返回问答列表</BackLink>
       <QADetail qa={qa} />
-      <Link className={buttonVariants({ variant: "outline" })} href="/family/qas">返回问答列表</Link>
     </section>
   );
 }

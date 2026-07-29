@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
+import { BackLink } from "@/components/navigation/back-link";
 import { ExpenditureList } from "@/features/expenditures/expenditure-display";
 import { getServerExpenditures } from "@/features/expenditures/expenditure-server";
 import { ApiRequestError } from "@/lib/api/client";
@@ -16,6 +17,7 @@ export default async function OwnerExpendituresPage({ searchParams }: OwnerExpen
   const page = await loadExpenditures(parseOffset(offset));
   return (
     <section className="space-y-6">
+      <BackLink href="/owner">返回管理首页</BackLink>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold">重大支出管理</h2>
@@ -32,7 +34,6 @@ export default async function OwnerExpendituresPage({ searchParams }: OwnerExpen
         listPath="/owner/expenditures"
         page={page}
       />
-      <Link className={buttonVariants({ variant: "outline" })} href="/owner">返回管理首页</Link>
     </section>
   );
 }

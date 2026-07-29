@@ -3,6 +3,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.modules.dashboard.router import router as dashboard_router
 from app.modules.expenditures.router import router as expenditures_router
 from app.modules.auth.router import router as auth_router
 from app.modules.posts.router import public_router as public_posts_router
@@ -16,6 +17,7 @@ router.include_router(public_posts_router)
 router.include_router(posts_router)
 router.include_router(qas_router)
 router.include_router(expenditures_router)
+router.include_router(dashboard_router)
 
 
 @router.get("/health")

@@ -1,7 +1,6 @@
-import Link from "next/link";
+import { BackLink } from "@/components/navigation/back-link";
 import { redirect } from "next/navigation";
 
-import { buttonVariants } from "@/components/ui/button";
 import { PostList } from "@/features/posts/post-display";
 import { getServerPosts } from "@/features/posts/post-server";
 import { ApiRequestError } from "@/lib/api/client";
@@ -16,14 +15,12 @@ export default async function FamilyPostsPage({ searchParams }: FamilyPostsPageP
 
   return (
     <section className="space-y-6">
+      <BackLink href="/family">返回家庭首页</BackLink>
       <header className="space-y-2">
         <h2 className="text-2xl font-semibold">近况分享</h2>
         <p className="text-muted-foreground">查看公开和仅家人可见的近况。</p>
       </header>
       <PostList detailBasePath="/family/posts" listPath="/family/posts" page={page} showVisibility />
-      <Link className={buttonVariants({ variant: "outline" })} href="/family">
-        返回家庭首页
-      </Link>
     </section>
   );
 }

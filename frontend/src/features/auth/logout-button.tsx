@@ -38,19 +38,19 @@ export function LogoutButton() {
   }
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="flex w-full flex-col gap-2">
       <Button
-        aria-label="退出登录"
+        className="w-full justify-start text-destructive hover:text-destructive"
         disabled={isSubmitting}
         onClick={handleLogout}
-        size="icon"
-        title="退出登录"
-        variant="outline"
+        type="button"
+        variant="ghost"
       >
-        <LogOut />
+        <LogOut aria-hidden="true" data-icon="inline-start" />
+        <span>{isSubmitting ? "正在退出..." : "退出登录"}</span>
       </Button>
       {errorMessage ? (
-        <p className="text-right text-sm text-destructive" role="alert">
+        <p className="px-2 text-sm text-destructive" role="alert">
           {errorMessage}
         </p>
       ) : null}

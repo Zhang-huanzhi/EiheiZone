@@ -1,7 +1,6 @@
-import Link from "next/link";
+import { BackLink } from "@/components/navigation/back-link";
 import { redirect } from "next/navigation";
 
-import { buttonVariants } from "@/components/ui/button";
 import { ExpenditureList } from "@/features/expenditures/expenditure-display";
 import { getServerExpenditures } from "@/features/expenditures/expenditure-server";
 import { ApiRequestError } from "@/lib/api/client";
@@ -15,12 +14,12 @@ export default async function FamilyExpendituresPage({ searchParams }: FamilyExp
   const page = await loadExpenditures(parseOffset(offset));
   return (
     <section className="space-y-6">
+      <BackLink href="/family">返回家庭首页</BackLink>
       <header className="space-y-2">
         <h2 className="text-2xl font-semibold">重大支出</h2>
         <p className="text-muted-foreground">查看需要向家人说明的重大资金支出。</p>
       </header>
       <ExpenditureList detailBasePath="/family/expenditures" listPath="/family/expenditures" page={page} />
-      <Link className={buttonVariants({ variant: "outline" })} href="/family">返回家庭首页</Link>
     </section>
   );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
+import { BackLink } from "@/components/navigation/back-link";
 import { getServerCurrentUser } from "@/features/auth/auth-server";
 import { QAList } from "@/features/qas/qa-display";
 import { getServerQAs } from "@/features/qas/qa-server";
@@ -18,6 +19,7 @@ export default async function FamilyQAsPage({ searchParams }: FamilyQAsPageProps
 
   return (
     <section className="space-y-6">
+      <BackLink href="/family">返回家庭首页</BackLink>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold">家庭问答</h2>
@@ -31,7 +33,6 @@ export default async function FamilyQAsPage({ searchParams }: FamilyQAsPageProps
         ) : null}
       </header>
       <QAList detailBasePath="/family/qas" listPath="/family/qas" page={page} />
-      <Link className={buttonVariants({ variant: "outline" })} href="/family">返回家庭首页</Link>
     </section>
   );
 }

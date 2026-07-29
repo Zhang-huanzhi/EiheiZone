@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { EmptyState } from "@/components/feedback/empty-state";
+import { BackLink } from "@/components/navigation/back-link";
 import { buttonVariants } from "@/components/ui/button";
 import { DeletePostButton } from "@/features/posts/delete-post-button";
 import { PostVisibilityLabel } from "@/features/posts/post-display";
@@ -18,6 +19,7 @@ export default async function OwnerPostsPage({ searchParams }: OwnerPostsPagePro
 
   return (
     <section className="space-y-6">
+      <BackLink href="/owner">返回管理首页</BackLink>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold">近况管理</h2>
@@ -45,9 +47,6 @@ export default async function OwnerPostsPage({ searchParams }: OwnerPostsPagePro
           ))}
         </ol>
       )}
-      <Link className={buttonVariants({ variant: "outline" })} href="/owner">
-        返回管理首页
-      </Link>
     </section>
   );
 }

@@ -1,7 +1,6 @@
-import Link from "next/link";
+import { BackLink } from "@/components/navigation/back-link";
 import { notFound, redirect } from "next/navigation";
 
-import { buttonVariants } from "@/components/ui/button";
 import { PostDetail } from "@/features/posts/post-display";
 import { getServerPost } from "@/features/posts/post-server";
 import { ApiRequestError } from "@/lib/api/client";
@@ -16,10 +15,8 @@ export default async function FamilyPostDetailPage({ params }: FamilyPostDetailP
 
   return (
     <section className="space-y-6">
+      <BackLink href="/family/posts">返回近况列表</BackLink>
       <PostDetail post={post} showVisibility />
-      <Link className={buttonVariants({ variant: "outline" })} href="/family/posts">
-        返回近况列表
-      </Link>
     </section>
   );
 }

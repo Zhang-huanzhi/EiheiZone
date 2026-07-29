@@ -10,7 +10,12 @@ from app.core.errors import AppError
 from app.core.pagination import Page, PaginationParams
 from app.modules.auth.models import User, UserRole
 from app.modules.qas.models import QA, QAStatus
-from app.modules.qas.repository import add_qa, get_qa, list_qas
+from app.modules.qas.repository import (
+    add_qa,
+    get_qa,
+    list_qas,
+    list_unanswered_qas,
+)
 from app.modules.qas.schemas import QACreate, QAAnswerUpsert, QAResponse
 
 
@@ -24,6 +29,28 @@ def list_qas_for_user(
 
     _require_reader(user)
     items, total = list_qas(db, offset=pagination.offset, limit=pagination.limit)
+    return Page(
+        items=[_to_response(qa) for qa in items],
+        total=total,
+        offset=pagination.offset,
+        limit=pagination.limit,
+    )
+
+
+def list_unanswered_qas_for_user(
+    db: Session,
+    *,
+    user: User,
+    pagination: PaginationParams,
+) -> Page[QAResponse]:
+    """Return pending family QAs to an authenticated Family or Owner reader."""
+
+    _require_reader(user)
+    items, total = list_unanswered_qas(
+        db,
+        offset=pagination.offset,
+        limit=pagination.limit,
+    )
     return Page(
         items=[_to_response(qa) for qa in items],
         total=total,

@@ -20,8 +20,16 @@ vi.mock("@/features/auth/login-redirect", () => ({
   LoginRedirect: () => <p>login redirect</p>,
 }));
 
-vi.mock("@/features/auth/logout-button", () => ({
-  LogoutButton: () => <button>logout</button>,
+vi.mock("@/features/auth/account-menu", () => ({
+  AccountMenu: ({ displayName }: { displayName: string }) => (
+    <button>{displayName}的账号菜单</button>
+  ),
+}));
+
+vi.mock("@/features/auth/area-navigation", () => ({
+  AreaNavigation: ({ area }: { area: "family" | "owner" }) => (
+    <nav aria-label={`${area} navigation`} />
+  ),
 }));
 
 const mockedGetServerCurrentUser = vi.mocked(getServerCurrentUser);
@@ -66,7 +74,10 @@ describe("protected layouts", () => {
       );
 
       expect(screen.getByText("family content")).toBeInTheDocument();
-      expect(screen.getByText(user.display_name)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: `${user.display_name}的账号菜单` }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("navigation", { name: "family navigation" })).toBeInTheDocument();
       unmount();
     }
   });
@@ -86,7 +97,8 @@ describe("protected layouts", () => {
     render(await OwnerLayout({ children: <p>owner content</p> }));
 
     expect(screen.getByText("owner content")).toBeInTheDocument();
-    expect(screen.getByText("Owner User")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Owner User的账号菜单" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "owner navigation" })).toBeInTheDocument();
   });
 
   it("shows a safe service state when Family identity lookup fails", async () => {
