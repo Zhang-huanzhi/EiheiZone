@@ -1,0 +1,1 @@
+"""Major family expenditure module."""

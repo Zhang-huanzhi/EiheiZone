@@ -8,6 +8,7 @@ from app.db.base import Base
 import app.modules.auth.models  # noqa: F401  # Register Auth tables with Base.metadata.
 import app.modules.posts.models  # noqa: F401  # Register Post tables with Base.metadata.
 import app.modules.qas.models  # noqa: F401  # Register QA tables with Base.metadata.
+import app.modules.expenditures.models  # noqa: F401  # Register Expenditure tables.
 
 
 config = context.config
