@@ -7,11 +7,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { createQuestion } from "@/features/qas/qa-api";
 import { ApiRequestError } from "@/lib/api/client";
+import { useHydrated } from "@/lib/use-hydrated";
 
 const MAX_QUESTION_LENGTH = 2000;
 
 export function QuestionForm() {
   const router = useRouter();
+  const isHydrated = useHydrated();
   const [question, setQuestion] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export function QuestionForm() {
         {fieldError ? <p className="text-sm text-destructive" id="qa-question-error">{fieldError}</p> : null}
       </div>
       {formError ? <p className="text-sm text-destructive" role="alert">{formError}</p> : null}
-      <Button disabled={isSubmitting} type="submit">
+      <Button disabled={!isHydrated || isSubmitting} type="submit">
         <Send data-icon="inline-start" />
         {isSubmitting ? "正在提交..." : "提交问题"}
       </Button>

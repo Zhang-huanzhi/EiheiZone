@@ -19,6 +19,7 @@ import type {
   ExpenditureUpdateInput,
 } from "@/features/expenditures/expenditure-types";
 import { ApiRequestError } from "@/lib/api/client";
+import { useHydrated } from "@/lib/use-hydrated";
 
 type ExpenditureFormProps = {
   initialExpenditure?: ExpenditureRecord;
@@ -32,6 +33,7 @@ const MAX_DESCRIPTION_LENGTH = 2000;
 
 export function ExpenditureForm({ initialExpenditure }: ExpenditureFormProps) {
   const router = useRouter();
+  const isHydrated = useHydrated();
   const [spentOn, setSpentOn] = useState(initialExpenditure?.spent_on ?? "");
   const [amount, setAmount] = useState(initialExpenditure?.amount ?? "");
   const [currency, setCurrency] = useState(initialExpenditure?.currency ?? "CNY");
@@ -207,7 +209,7 @@ export function ExpenditureForm({ initialExpenditure }: ExpenditureFormProps) {
         {fieldErrors.description ? <p className="text-sm text-destructive" id="expenditure-description-error">{fieldErrors.description}</p> : null}
       </div>
       {formError ? <p className="text-sm text-destructive" role="alert">{formError}</p> : null}
-      <Button disabled={isSubmitting} type="submit">
+      <Button disabled={!isHydrated || isSubmitting} type="submit">
         <Save data-icon="inline-start" />
         {isSubmitting ? "正在保存..." : initialExpenditure ? "保存修改" : "记录支出"}
       </Button>

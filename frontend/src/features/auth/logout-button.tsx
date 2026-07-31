@@ -7,9 +7,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { logoutUser } from "@/features/auth/auth-api";
 import { ApiRequestError } from "@/lib/api/client";
+import { useHydrated } from "@/lib/use-hydrated";
 
 export function LogoutButton() {
   const router = useRouter();
+  const isHydrated = useHydrated();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -41,7 +43,7 @@ export function LogoutButton() {
     <div className="flex w-full flex-col gap-2">
       <Button
         className="w-full justify-start text-destructive hover:text-destructive"
-        disabled={isSubmitting}
+        disabled={!isHydrated || isSubmitting}
         onClick={handleLogout}
         type="button"
         variant="ghost"

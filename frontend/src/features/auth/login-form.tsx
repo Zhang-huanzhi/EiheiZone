@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { getCsrfToken, loginUser } from "@/features/auth/auth-api";
 import { getSafePostLoginPath } from "@/features/auth/auth-routing";
 import { ApiRequestError } from "@/lib/api/client";
+import { useHydrated } from "@/lib/use-hydrated";
 
 type LoginFormProps = {
   nextPath?: string;
@@ -49,6 +50,7 @@ function getFormError(error: unknown): string {
 
 export function LoginForm({ nextPath }: LoginFormProps) {
   const router = useRouter();
+  const isHydrated = useHydrated();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -147,7 +149,7 @@ export function LoginForm({ nextPath }: LoginFormProps) {
         </p>
       ) : null}
 
-      <Button className="w-full" disabled={isSubmitting} size="lg" type="submit">
+      <Button className="w-full" disabled={!isHydrated || isSubmitting} size="lg" type="submit">
         <LogIn data-icon="inline-start" />
         {isSubmitting ? "正在登录..." : "登录"}
       </Button>

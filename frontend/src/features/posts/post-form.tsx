@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { createPost, updatePost } from "@/features/posts/post-api";
 import type { PostRecord, PostVisibility } from "@/features/posts/post-types";
 import { ApiRequestError } from "@/lib/api/client";
+import { useHydrated } from "@/lib/use-hydrated";
 
 type PostFormProps = {
   initialPost?: PostRecord;
@@ -19,6 +20,7 @@ const MAX_BODY_LENGTH = 10000;
 
 export function PostForm({ initialPost }: PostFormProps) {
   const router = useRouter();
+  const isHydrated = useHydrated();
   const [title, setTitle] = useState(initialPost?.title ?? "");
   const [body, setBody] = useState(initialPost?.body ?? "");
   const [visibility, setVisibility] = useState<PostVisibility>(initialPost?.visibility ?? "family");
@@ -150,7 +152,7 @@ export function PostForm({ initialPost }: PostFormProps) {
         </select>
       </div>
       {formError ? <p className="text-sm text-destructive" role="alert">{formError}</p> : null}
-      <Button disabled={isSubmitting} type="submit">
+      <Button disabled={!isHydrated || isSubmitting} type="submit">
         {isSubmitting ? "正在保存..." : isEditing ? "保存修改" : "发布近况"}
       </Button>
     </form>

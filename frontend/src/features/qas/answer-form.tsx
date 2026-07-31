@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { upsertAnswer } from "@/features/qas/qa-api";
 import type { QARecord } from "@/features/qas/qa-types";
 import { ApiRequestError } from "@/lib/api/client";
+import { useHydrated } from "@/lib/use-hydrated";
 
 const MAX_ANSWER_LENGTH = 10000;
 
 export function AnswerForm({ qa }: { qa: QARecord }) {
   const router = useRouter();
+  const isHydrated = useHydrated();
   const [answer, setAnswer] = useState(qa.answer ?? "");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ export function AnswerForm({ qa }: { qa: QARecord }) {
         {fieldError ? <p className="text-sm text-destructive" id="qa-answer-error">{fieldError}</p> : null}
       </div>
       {formError ? <p className="text-sm text-destructive" role="alert">{formError}</p> : null}
-      <Button disabled={isSubmitting} type="submit">
+      <Button disabled={!isHydrated || isSubmitting} type="submit">
         <Save data-icon="inline-start" />
         {isSubmitting ? "正在保存..." : qa.status === "answered" ? "更新回答" : "保存回答"}
       </Button>
