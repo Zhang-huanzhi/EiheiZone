@@ -34,7 +34,7 @@ def list_visible_posts(db: Session, *, offset: int, limit: int) -> tuple[list[Po
 def get_visible_post(db: Session, post_id: UUID) -> Post | None:
     """Return one post for an already authenticated Family or Owner reader."""
 
-    return db.get(Post, post_id)
+    return db.scalar(select(Post).where(Post.id == post_id))
 
 
 def add_post(db: Session, post: Post) -> None:

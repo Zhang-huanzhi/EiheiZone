@@ -26,13 +26,20 @@ class PostVisibility(str, Enum):
 def enum_values(enum_class: type[Enum]) -> list[str]:
     """Persist string enum values instead of Python member names."""
 
-    return [str(member.value) for member in enum_class]
+    values: list[str] = []
+    for member in enum_class:
+        value = member.value
+        if not isinstance(value, str):
+            raise TypeError("Database enum values must be strings")
+        values.append(value)
+    return values
 
 
 class Post(Base):
     """A short update authored and managed by an Owner."""
 
     __tablename__ = "posts"
+    # noinspection SpellCheckingInspection
     __table_args__ = (
         CheckConstraint(
             "char_length(btrim(title)) BETWEEN 1 AND 120",

@@ -26,13 +26,20 @@ class QAStatus(str, Enum):
 def enum_values(enum_class: type[Enum]) -> list[str]:
     """Persist string enum values instead of Python member names."""
 
-    return [str(member.value) for member in enum_class]
+    values: list[str] = []
+    for member in enum_class:
+        value = member.value
+        if not isinstance(value, str):
+            raise TypeError("Database enum values must be strings")
+        values.append(value)
+    return values
 
 
 class QA(Base):
     """A Family question with at most one current Owner answer."""
 
     __tablename__ = "qas"
+    # noinspection SpellCheckingInspection
     __table_args__ = (
         CheckConstraint(
             "char_length(question) BETWEEN 1 AND 2000 AND char_length(btrim(question)) >= 1",

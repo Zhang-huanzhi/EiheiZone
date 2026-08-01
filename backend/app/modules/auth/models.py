@@ -29,7 +29,13 @@ class AccountStatus(str, Enum):
 def enum_values(enum_class: type[Enum]) -> list[str]:
     """Persist enum values rather than Python member names."""
 
-    return [str(member.value) for member in enum_class]
+    values: list[str] = []
+    for member in enum_class:
+        value = member.value
+        if not isinstance(value, str):
+            raise TypeError("Database enum values must be strings")
+        values.append(value)
+    return values
 
 
 class User(Base):

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError
 from app.core.pagination import Page, PaginationParams
 from app.modules.auth.models import User, UserRole
+from app.modules.expenditures.currencies import normalize_currency_code
 from app.modules.expenditures.models import Expenditure
 from app.modules.expenditures.repository import (
     add_expenditure,
@@ -115,7 +116,7 @@ def _to_response(expenditure: Expenditure) -> ExpenditureResponse:
         created_by_display_name=creator_display_name,
         spent_on=expenditure.spent_on,
         amount=expenditure.amount,
-        currency=expenditure.currency,
+        currency=normalize_currency_code(expenditure.currency),
         category=expenditure.category,
         description=expenditure.description,
         created_at=expenditure.created_at,

@@ -1,8 +1,10 @@
 """Database access helpers for authentication and server-side sessions."""
 
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import delete, select
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.orm import Session, joinedload
 
 from app.modules.auth.models import User, UserSession
@@ -18,7 +20,7 @@ def get_user_by_login_name(db: Session, login_name: str) -> User | None:
 def get_user_by_id(db: Session, user_id: UUID) -> User | None:
     """Return one user by its primary key."""
 
-    return db.get(User, user_id)
+    return db.scalar(select(User).where(User.id == user_id))
 
 
 def add_user(db: Session, user: User) -> None:
@@ -56,5 +58,8 @@ def delete_session(db: Session, login_session: UserSession) -> None:
 def delete_sessions_for_user(db: Session, user_id: UUID) -> int:
     """Stage deletion of every session for a user and return the affected count."""
 
-    result = db.execute(delete(UserSession).where(UserSession.user_id == user_id))
+    result = cast(
+        CursorResult[Any],
+        db.execute(delete(UserSession).where(UserSession.user_id == user_id)),
+    )
     return result.rowcount

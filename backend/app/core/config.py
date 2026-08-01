@@ -21,6 +21,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # noinspection SpellCheckingInspection
     app_name: str = "EiheiZone API"
     app_env: Literal["development", "test", "production"] = "development"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
@@ -111,4 +112,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    # noinspection PyArgumentList
     return Settings()
