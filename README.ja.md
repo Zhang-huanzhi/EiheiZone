@@ -75,11 +75,14 @@ cd backend
 cd backend
 .\.venv\Scripts\python.exe -m pytest
 .\.venv\Scripts\ruff.exe check .
+# pytest-cov のインストール後、uv でカバレッジを生成できます：
+uv run pytest --cov=app --cov-branch --cov-report=term-missing --cov-report=html
 
 cd ..\frontend
 npm run lint
 npm run typecheck
 npm test
+npm run test:coverage
 npm run build
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\e2e\run-local.ps1
 ```

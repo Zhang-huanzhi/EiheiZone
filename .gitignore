@@ -8,6 +8,9 @@ backend/.venv/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+backend/.coverage
+backend/coverage.xml
+backend/htmlcov/
 
 # Environment variables
 .env
