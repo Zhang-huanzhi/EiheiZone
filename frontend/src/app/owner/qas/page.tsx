@@ -1,3 +1,7 @@
+import { MessageCircleQuestion } from "lucide-react";
+import Link from "next/link";
+
+import { buttonVariants } from "@/components/ui/button";
 import { BackLink } from "@/components/navigation/back-link";
 import { redirect } from "next/navigation";
 
@@ -16,9 +20,15 @@ export default async function OwnerQAsPage({ searchParams }: OwnerQAsPageProps) 
   return (
     <section className="space-y-6">
       <BackLink href="/owner">返回管理首页</BackLink>
-      <header className="space-y-2">
-        <h2 className="text-2xl font-semibold">问答管理</h2>
-        <p className="text-muted-foreground">查看问题并保存当前回答。</p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold">问答管理</h2>
+          <p className="text-muted-foreground">查看问题并保存当前回答。</p>
+        </div>
+        <Link className={buttonVariants()} href="/family/qas/new">
+          <MessageCircleQuestion data-icon="inline-start" />
+          提出问题
+        </Link>
       </header>
       <QAList detailBasePath="/owner/qas" listPath="/owner/qas" page={page} />
     </section>

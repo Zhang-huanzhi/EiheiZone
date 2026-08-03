@@ -25,7 +25,7 @@ export default async function FamilyQAsPage({ searchParams }: FamilyQAsPageProps
           <h2 className="text-2xl font-semibold">家庭问答</h2>
           <p className="text-muted-foreground">查看家人提出的问题和当前回答。</p>
         </div>
-        {role === "family" ? (
+        {role === "family" || role === "owner" ? (
           <Link className={buttonVariants()} href="/family/qas/new">
             <MessageCircleQuestion data-icon="inline-start" />
             提出问题

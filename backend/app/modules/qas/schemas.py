@@ -21,7 +21,7 @@ def _validate_text(value: str, *, label: str, maximum: int) -> str:
 
 
 class QACreate(BaseModel):
-    """Accept the question text a Family user may submit."""
+    """Accept the question text a Family or Owner user may submit."""
 
     question: str
 

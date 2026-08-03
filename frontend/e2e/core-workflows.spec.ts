@@ -9,6 +9,7 @@ const appOrigin = new URL(process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000").o
 const runId = Date.now().toString(36);
 const publicPostTitle = `E2E-${runId}-公开近况`;
 const familyPostTitle = `E2E-${runId}-家庭近况`;
+const ownerQuestion = `E2E-${runId}-Owner问题`;
 const question = `E2E-${runId}-家庭问题`;
 const answer = `E2E-${runId}-当前回答`;
 const expenditureCategory = `E2E-${runId}-测试分类`;
@@ -19,6 +20,15 @@ test.describe.configure({ mode: "serial" });
 
 test("Public, Family, and Owner complete the V1 core workflow", async ({ page }) => {
   await login(page, ownerLoginName, ownerPassword, /\/owner$/);
+
+  await page.getByRole("link", { name: "提出问题" }).click();
+  await expect(page).toHaveURL(/\/family\/qas\/new$/);
+  await waitForFormHydration(page, "提交问题");
+  await page.getByLabel("问题").fill(ownerQuestion);
+  await page.getByRole("button", { name: "提交问题" }).click();
+  await expect(page).toHaveURL(/\/family\/qas\/[0-9a-f-]+$/);
+  await expect(page.getByRole("heading", { name: ownerQuestion })).toBeVisible();
+  await expect(page.getByText("待回答", { exact: true })).toBeVisible();
 
   await createPost(page, publicPostTitle, "虚构的公开测试正文。", "public");
   await createPost(page, familyPostTitle, "虚构的家庭测试正文。", "family");

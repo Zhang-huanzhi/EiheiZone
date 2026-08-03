@@ -9,7 +9,6 @@ from app.core.pagination import Page, Pagination
 from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
-    require_family,
     require_family_access,
     require_owner,
     validate_csrf_request,
@@ -48,7 +47,7 @@ def get_qa_record(
 def create_qa_endpoint(
     payload: QACreate,
     request: Request,
-    current_user: CurrentUser = Depends(require_family),
+    current_user: CurrentUser = Depends(require_family_access),
     db: Session = Depends(get_db),
 ) -> QAResponse:
     validate_csrf_request(request, current_user.session_id)

@@ -3,6 +3,7 @@ import {
   CircleHelp,
   Clock3,
   FileText,
+  MessageCircleQuestion,
   ReceiptText,
   type LucideIcon,
 } from "lucide-react";
@@ -255,16 +256,22 @@ export function OwnerWorkspace({ data }: { data: DashboardData }) {
   return (
     <div className="space-y-10">
       <section className="space-y-4" aria-labelledby="owner-modules-title">
-        <header className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-md bg-muted">
-            <Clock3 aria-hidden="true" className="size-4" />
-          </span>
-          <div>
-            <h2 className="text-lg font-semibold" id="owner-modules-title">
-              管理入口
-            </h2>
-            <p className="text-sm text-muted-foreground">选择要处理的内容模块</p>
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
+              <Clock3 aria-hidden="true" className="size-4" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold" id="owner-modules-title">
+                管理入口
+              </h2>
+              <p className="text-sm text-muted-foreground">选择要处理的内容模块</p>
+            </div>
           </div>
+          <Link className={buttonVariants({ size: "sm" })} href="/family/qas/new">
+            <MessageCircleQuestion data-icon="inline-start" />
+            提出问题
+          </Link>
         </header>
         <div className="grid gap-3 md:grid-cols-3">
           {managementItems.map(({ href, icon: Icon, title, description }) => (

@@ -19,7 +19,7 @@ export function QAStatusLabel({ status }: Pick<QARecord, "status">) {
 
 export function QAList({ page, detailBasePath, listPath }: QAListProps) {
   if (page.items.length === 0) {
-    return <EmptyState title="还没有家庭问答" description="家人提出问题后，它会出现在这里。" />;
+    return <EmptyState title="还没有家庭问答" description="Family 或 Owner 提出问题后，它会出现在这里。" />;
   }
 
   const previousOffset = Math.max(0, page.offset - page.limit);

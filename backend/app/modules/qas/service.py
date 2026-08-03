@@ -70,9 +70,9 @@ def get_qa_for_user_or_404(db: Session, *, user: User, qa_id: UUID) -> QARespons
 
 
 def create_question(db: Session, *, user: User, payload: QACreate) -> QAResponse:
-    """Create a complete unanswered QA for the current Family user."""
+    """Create a complete unanswered QA for the current Family or Owner user."""
 
-    _require_family(user)
+    _require_questioner(user)
     qa = QA(
         asked_by=user.id,
         asker=user,
@@ -135,9 +135,13 @@ def _require_reader(user: User) -> None:
         raise AppError(status_code=403, code="FORBIDDEN", message="QA access is not allowed")
 
 
-def _require_family(user: User) -> None:
-    if user.role is not UserRole.FAMILY:
-        raise AppError(status_code=403, code="FORBIDDEN", message="Family access is required")
+def _require_questioner(user: User) -> None:
+    if user.role not in {UserRole.FAMILY, UserRole.OWNER}:
+        raise AppError(
+            status_code=403,
+            code="FORBIDDEN",
+            message="Family or Owner access is required",
+        )
 
 
 def _require_owner(user: User) -> None:

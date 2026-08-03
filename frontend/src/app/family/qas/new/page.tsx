@@ -9,7 +9,7 @@ import { ApiRequestError } from "@/lib/api/client";
 
 export default async function NewQuestionPage() {
   const currentUser = await loadCurrentUser();
-  if (currentUser.role !== "family") {
+  if (currentUser.role !== "family" && currentUser.role !== "owner") {
     return (
       <section className="space-y-4" aria-labelledby="question-forbidden-title">
         <BackLink href="/family/qas">返回问答列表</BackLink>
@@ -17,7 +17,7 @@ export default async function NewQuestionPage() {
         <h2 className="text-2xl font-semibold" id="question-forbidden-title">
           当前账号不能提出问题
         </h2>
-        <p className="text-muted-foreground">只有 Family 可以提交问题，Owner 可以在阅读区查看家庭问答。</p>
+        <p className="text-muted-foreground">只有 Family 或 Owner 可以提交问题。</p>
       </section>
     );
   }

@@ -71,7 +71,7 @@ def test_qa_api_has_no_public_read_path_and_requires_authentication(client: Test
     assert public_response.status_code == 404
 
 
-def test_family_question_owner_answer_and_family_wide_read_flow(
+def test_family_and_owner_question_owner_answer_and_family_wide_read_flow(
     client: TestClient,
     test_session: Session,
 ) -> None:
@@ -91,11 +91,12 @@ def test_family_question_owner_answer_and_family_wide_read_flow(
     assert created.json()["answer"] is None
 
     owner_csrf = login_with_csrf(client, owner_name)
-    owner_cannot_ask = client.post(
+    owner_question = client.post(
         "/api/v1/qas",
         headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
-        json={"question": "Owner must not ask"},
+        json={"question": "Can the Owner also ask a question?"},
     )
+    owner_qa_id = owner_question.json()["id"]
     answered = client.put(
         f"/api/v1/qas/{qa_id}/answer",
         headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
@@ -117,17 +118,24 @@ def test_family_question_owner_answer_and_family_wide_read_flow(
     )
     qa_count = test_session.scalar(select(func.count()).select_from(QA))
 
-    assert owner_cannot_ask.status_code == 403
+    assert owner_question.status_code == 201
+    assert owner_question.json()["status"] == "unanswered"
+    assert owner_question.json()["asked_by_display_name"] == "API Owner"
     assert answered.status_code == 200
     assert answered.json()["status"] == "answered"
     assert answered.json()["answered_by_display_name"] == "API Owner"
     assert replaced.status_code == 200
     assert replaced.json()["id"] == qa_id
     assert family_list.status_code == 200
-    assert family_list.json()["items"][0]["asked_by_display_name"] == "API Family A"
+    assert family_list.json()["total"] == 2
+    assert {item["id"] for item in family_list.json()["items"]} == {qa_id, owner_qa_id}
+    assert any(
+        item["asked_by_display_name"] == "API Family A"
+        for item in family_list.json()["items"]
+    )
     assert family_detail.json()["answer"] == "Updated current answer."
     assert family_cannot_answer.status_code == 403
-    assert qa_count == 1
+    assert qa_count == 2
 
 
 def test_qa_writes_require_csrf_and_validate_text_fields(

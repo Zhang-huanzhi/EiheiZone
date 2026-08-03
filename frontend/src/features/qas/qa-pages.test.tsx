@@ -13,6 +13,9 @@ vi.mock("@/features/qas/qa-server", () => ({ getServerQAs: vi.fn() }));
 vi.mock("@/features/qas/qa-display", () => ({
   QAList: ({ detailBasePath }: { detailBasePath: string }) => <p>qa list {detailBasePath}</p>,
 }));
+vi.mock("@/features/qas/question-form", () => ({
+  QuestionForm: () => <p>question form</p>,
+}));
 
 const mockedGetServerCurrentUser = vi.mocked(getServerCurrentUser);
 const mockedGetServerQAs = vi.mocked(getServerQAs);
@@ -23,7 +26,7 @@ afterEach(() => {
 });
 
 describe("QA pages", () => {
-  it("shows the Family question entry only to a Family reader", async () => {
+  it("shows the question entry to a Family reader", async () => {
     mockedGetServerQAs.mockResolvedValue(emptyPage);
     mockedGetServerCurrentUser.mockResolvedValue({
       id: "family-id",
@@ -39,7 +42,7 @@ describe("QA pages", () => {
     expect(screen.getByRole("link", { name: "提出问题" })).toBeInTheDocument();
   });
 
-  it("keeps Owner in the Family reading view without a question entry", async () => {
+  it("shows the question entry to an Owner reader", async () => {
     mockedGetServerQAs.mockResolvedValue(emptyPage);
     mockedGetServerCurrentUser.mockResolvedValue({
       id: "owner-id",
@@ -51,7 +54,7 @@ describe("QA pages", () => {
     render(await FamilyQAsPage({ searchParams: Promise.resolve({}) }));
 
     expect(screen.getByText("qa list /family/qas")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "提出问题" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "提出问题" })).toBeInTheDocument();
   });
 
   it("uses the authenticated QA query for Owner management", async () => {
@@ -61,10 +64,14 @@ describe("QA pages", () => {
 
     expect(mockedGetServerQAs).toHaveBeenCalledWith({ offset: 0 });
     expect(screen.getByText("qa list /owner/qas")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "提出问题" })).toHaveAttribute(
+      "href",
+      "/family/qas/new",
+    );
     expect(screen.queryByRole("button", { name: /删除/ })).not.toBeInTheDocument();
   });
 
-  it("shows a precise forbidden state when Owner opens the Family question page", async () => {
+  it("lets Owner open the Family question page", async () => {
     mockedGetServerCurrentUser.mockResolvedValue({
       id: "owner-id",
       login_name: "owner-user",
@@ -74,7 +81,8 @@ describe("QA pages", () => {
 
     render(await NewQuestionPage());
 
-    expect(screen.getByRole("heading", { name: "当前账号不能提出问题" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "返回问答列表" })).toHaveAttribute("href", "/family/qas");
+    expect(screen.getByRole("heading", { name: "提出问题" })).toBeInTheDocument();
+    expect(screen.getByText("question form")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "取消" })).toHaveAttribute("href", "/family/qas");
   });
 });

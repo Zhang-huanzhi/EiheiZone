@@ -55,30 +55,34 @@ def test_family_question_is_visible_to_other_family_and_owner(test_session: Sess
     assert owner_detail.id == created.id
 
 
-def test_service_enforces_exact_question_and_answer_roles(test_session: Session) -> None:
+def test_service_allows_family_and_owner_questions_but_only_owner_answers(
+    test_session: Session,
+) -> None:
     family = create_account(test_session, UserRole.FAMILY, "Family")
     owner = create_account(test_session, UserRole.OWNER, "Owner")
-    created = create_question(
+    family_question = create_question(
         test_session,
         user=family,
         payload=QACreate(question="Who may perform each action?"),
     )
 
-    with pytest.raises(AppError) as owner_question_error:
-        create_question(
-            test_session,
-            user=owner,
-            payload=QACreate(question="Owner must not ask"),
-        )
+    owner_question = create_question(
+        test_session,
+        user=owner,
+        payload=QACreate(question="Can Owner also ask a question?"),
+    )
     with pytest.raises(AppError) as family_answer_error:
         upsert_answer(
             test_session,
             user=family,
-            qa_id=created.id,
+            qa_id=family_question.id,
             payload=QAAnswerUpsert(answer="Family must not answer"),
         )
 
-    assert owner_question_error.value.status_code == 403
+    assert family_question.status is QAStatus.UNANSWERED
+    assert owner_question.asked_by == owner.id
+    assert owner_question.asked_by_display_name == "Service Owner"
+    assert owner_question.status is QAStatus.UNANSWERED
     assert family_answer_error.value.status_code == 403
 
 

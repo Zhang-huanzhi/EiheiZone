@@ -112,6 +112,10 @@ describe("Dashboard pages", () => {
       "href",
       "/owner/expenditures",
     );
+    expect(screen.getByRole("link", { name: "提出问题" })).toHaveAttribute(
+      "href",
+      "/family/qas/new",
+    );
     expect(screen.getByRole("heading", { name: "待回答问题" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /最近的问题/ })).toHaveAttribute(
       "href",

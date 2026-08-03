@@ -149,7 +149,7 @@ def test_family_is_rejected_by_every_owner_write_operation_with_valid_csrf(
     assert response.json()["error"]["code"] == "FORBIDDEN"
 
 
-def test_owner_cannot_submit_a_family_question_with_valid_csrf(
+def test_owner_can_submit_a_question_with_valid_csrf(
     client: TestClient,
     test_session: Session,
 ) -> None:
@@ -161,8 +161,9 @@ def test_owner_cannot_submit_a_family_question_with_valid_csrf(
     response = client.post(
         "/api/v1/qas",
         headers={"Origin": ORIGIN, "X-CSRF-Token": csrf_token},
-        json={"question": "Owner must not submit a Family question"},
+        json={"question": "Owner can submit a question under the V1 requirements"},
     )
 
-    assert response.status_code == 403
-    assert response.json()["error"]["code"] == "FORBIDDEN"
+    assert response.status_code == 201
+    assert response.json()["status"] == "unanswered"
+    assert response.json()["asked_by_display_name"] == "Permission Owner"
