@@ -12,7 +12,10 @@ RUN pip install --no-cache-dir "uv==0.11.23"
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-dev --no-install-project
 
+COPY alembic.ini ./
+COPY alembic ./alembic
 COPY app ./app
+COPY scripts ./scripts
 
 RUN useradd --create-home --uid 10001 appuser \
     && chown -R appuser:appuser /app

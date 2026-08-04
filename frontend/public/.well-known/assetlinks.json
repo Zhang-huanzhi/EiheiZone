@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "zone.eihei.app",
+      "sha256_cert_fingerprints": [
+        "54:0F:66:97:8E:EF:AD:23:38:42:58:04:D7:F4:E1:FD:C7:89:2C:34:27:7C:5A:FD:0B:E2:EB:35:0A:02:00:6F"
+      ]
+    }
+  }
+]
