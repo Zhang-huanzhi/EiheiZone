@@ -84,6 +84,8 @@ eiheizone/
 `-- deploy.env.example
 ```
 
+正式项目文档：[`docs/README.md`](docs/README.md)。V1 历史交付位于 [`docs/versions/v1/`](docs/versions/v1/)，后续变更记录在 [`docs/iterations/`](docs/iterations/)。
+
 ## 本地配置
 
 ### 环境要求

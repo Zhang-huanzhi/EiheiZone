@@ -84,6 +84,8 @@ eiheizone/
 `-- deploy.env.example
 ```
 
+Formal project documentation: [`docs/README.md`](docs/README.md). The V1 archive is in [`docs/versions/v1/`](docs/versions/v1/), and later changes are recorded in [`docs/iterations/`](docs/iterations/).
+
 ## Local setup
 
 ### Prerequisites

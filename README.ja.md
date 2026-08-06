@@ -84,6 +84,8 @@ eiheizone/
 `-- deploy.env.example
 ```
 
+正式ドキュメント：[`docs/README.md`](docs/README.md)。V1 の履歴資料は [`docs/versions/v1/`](docs/versions/v1/)、以降の変更記録は [`docs/iterations/`](docs/iterations/) にあります。
+
 ## ローカルセットアップ
 
 ### 必要な環境
