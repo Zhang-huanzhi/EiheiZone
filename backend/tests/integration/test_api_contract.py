@@ -15,6 +15,8 @@ EXPECTED_OPERATIONS = {
     ("post", "/api/v1/posts"),
     ("patch", "/api/v1/posts/{post_id}"),
     ("delete", "/api/v1/posts/{post_id}"),
+    ("post", "/api/v1/uploads/image"),
+    ("get", "/api/v1/media/images/{image_id}"),
     ("get", "/api/v1/qas"),
     ("get", "/api/v1/qas/{qa_id}"),
     ("post", "/api/v1/qas"),

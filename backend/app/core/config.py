@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     session_ttl_days: int = 30
     csrf_token_ttl_seconds: int = 3600
+    # Docker resolves this to /app/media; local development uses backend/media.
+    media_root: Path = BACKEND_DIRECTORY / "media"
 
     session_cookie_name: Literal["pfp_session"] = "pfp_session"
     csrf_cookie_name: Literal["pfp_csrf"] = "pfp_csrf"

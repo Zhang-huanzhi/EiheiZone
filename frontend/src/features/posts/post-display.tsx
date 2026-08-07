@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { PostPage, PostRecord } from "@/features/posts/post-types";
+import { PostImages } from "@/features/posts/post-images";
 
 type PostListProps = {
   page: PostPage;
@@ -58,6 +59,7 @@ export function PostList({ page, detailBasePath, listPath, showVisibility = fals
                 {showVisibility ? <PostVisibilityLabel visibility={post.visibility} /> : null}
               </div>
               <p className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">{post.body}</p>
+              <PostImages images={post.images} interactive={false} />
               <p className="text-xs text-muted-foreground">{formatDate(post.created_at)}</p>
             </Link>
           </li>
@@ -95,11 +97,9 @@ export function PostDetail({ post, showVisibility = false }: PostDetailProps) {
           {showVisibility ? <PostVisibilityLabel visibility={post.visibility} /> : null}
         </div>
         <p className="text-sm text-muted-foreground">发布于 {formatDate(post.created_at)}</p>
-        {post.updated_at !== post.created_at ? (
-          <p className="text-sm text-muted-foreground">更新于 {formatDate(post.updated_at)}</p>
-        ) : null}
       </header>
       <div className="whitespace-pre-wrap leading-7">{post.body}</div>
+      <PostImages images={post.images} />
     </article>
   );
 }

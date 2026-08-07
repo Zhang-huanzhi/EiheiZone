@@ -7,6 +7,15 @@ export type PostRecord = {
   visibility: PostVisibility;
   created_at: string;
   updated_at: string;
+  images?: PostImageRecord[];
+};
+
+export type PostImageRecord = {
+  id: string;
+  url: string;
+  position: number;
+  width: number;
+  height: number;
 };
 
 export type PostPage = {
@@ -20,9 +29,10 @@ export type PostCreateInput = {
   title: string;
   body: string;
   visibility: PostVisibility;
+  image_ids?: string[];
 };
 
-export type PostUpdateInput = Partial<PostCreateInput>;
+export type PostUpdateInput = Partial<Pick<PostCreateInput, "title" | "body" | "visibility">>;
 
 export type PostListParams = {
   offset?: number;

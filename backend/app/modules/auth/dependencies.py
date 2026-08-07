@@ -31,8 +31,8 @@ def get_current_user(
 
 
 def get_current_user_optional(
-    db: Session,
-    session_token: str | None,
+    db: Session = Depends(get_db),
+    session_token: str | None = Cookie(default=None, alias="pfp_session"),
 ) -> CurrentUser | None:
     """Resolve a valid login session without turning anonymous access into an error."""
 

@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError
 from app.core.pagination import Page, PaginationParams
 from app.modules.auth.models import User, UserRole
-from app.modules.posts.models import Post
+from app.modules.posts.models import Post, PostImageStatus
+from app.modules.posts.image_service import attach_images, delete_detached_images
 from app.modules.posts.repository import (
     add_post,
     delete_post,
@@ -63,8 +64,10 @@ def create_post(db: Session, *, user: User, payload: PostCreate) -> PostResponse
     """Create one Post in an Owner-controlled transaction."""
 
     _require_owner(user)
-    post = Post(author_id=user.id, **payload.model_dump())
+    post_data = payload.model_dump(exclude={"image_ids"})
+    post = Post(author_id=user.id, **post_data)
     add_post(db, post)
+    attach_images(db, user=user, post=post, image_ids=payload.image_ids)
     _commit_and_refresh(db, post)
     return PostResponse.model_validate(post)
 
@@ -96,8 +99,13 @@ def remove_post(db: Session, *, user: User, post_id: UUID) -> None:
     post = get_visible_post(db, post_id)
     if post is None:
         raise _post_not_found()
+    images = list(post.images)
+    for image in images:
+        image.post = None
+        image.status = PostImageStatus.CLEANUP_PENDING
     delete_post(db, post)
     _commit(db)
+    delete_detached_images(db, images)
 
 
 def _page(items: list[Post], total: int, pagination: PaginationParams) -> Page[PostResponse]:

@@ -17,6 +17,7 @@ import {
 import { formatExactAmount } from "@/features/expenditures/expenditure-money";
 import type { ExpenditureRecord } from "@/features/expenditures/expenditure-types";
 import { PostVisibilityLabel } from "@/features/posts/post-display";
+import { PostImages } from "@/features/posts/post-images";
 import type { PostRecord } from "@/features/posts/post-types";
 import { QAStatusLabel } from "@/features/qas/qa-display";
 import type { QARecord } from "@/features/qas/qa-types";
@@ -104,6 +105,7 @@ function RecentPosts({ section }: { section: DashboardSection<PostRecord> }) {
                 <p className="text-xs text-muted-foreground">
                   {formatTimestamp(post.created_at)}
                 </p>
+                <PostImages images={post.images} interactive={false} />
               </Link>
             </li>
           ))}
