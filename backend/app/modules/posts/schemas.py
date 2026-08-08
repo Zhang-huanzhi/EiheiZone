@@ -10,6 +10,19 @@ from app.modules.posts.models import PostVisibility
 
 MAX_TITLE_LENGTH = 120
 MAX_BODY_LENGTH = 10000
+MAX_IMAGES = 9
+
+
+class PostImageResponse(BaseModel):
+    """Expose image metadata and its permission-checked API URL."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    url: str
+    position: int
+    width: int
+    height: int
 
 
 def _normalize_title(value: str) -> str:
@@ -35,6 +48,7 @@ class PostCreate(BaseModel):
     title: str
     body: str
     visibility: PostVisibility = PostVisibility.FAMILY
+    image_ids: list[UUID] = Field(default_factory=list, max_length=MAX_IMAGES)
 
     @field_validator("title")
     @classmethod
@@ -87,3 +101,4 @@ class PostResponse(BaseModel):
     visibility: PostVisibility
     created_at: datetime
     updated_at: datetime
+    images: list[PostImageResponse] = Field(default_factory=list)

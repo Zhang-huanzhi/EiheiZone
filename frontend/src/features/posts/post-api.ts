@@ -9,6 +9,14 @@ import type {
   PostUpdateInput,
 } from "@/features/posts/post-types";
 
+export type UploadedPostImage = {
+  id: string;
+  url: string;
+  position: number;
+  width: number;
+  height: number;
+};
+
 function withPagination(path: string, params: PostListParams = {}): string {
   const searchParams = new URLSearchParams();
 
@@ -54,6 +62,17 @@ export async function createPost(input: PostCreateInput): Promise<PostRecord> {
       "X-CSRF-Token": csrfToken,
     },
     body: JSON.stringify(input),
+  });
+}
+
+export async function uploadPostImage(file: Blob, name = "image.webp"): Promise<UploadedPostImage> {
+  const csrfToken = await getCsrfToken();
+  const formData = new FormData();
+  formData.append("file", file, name);
+  return apiRequest<UploadedPostImage>("/uploads/image", {
+    method: "POST",
+    headers: { "X-CSRF-Token": csrfToken },
+    body: formData,
   });
 }
 

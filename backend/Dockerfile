@@ -18,6 +18,7 @@ COPY app ./app
 COPY scripts ./scripts
 
 RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /app/media \
     && chown -R appuser:appuser /app
 
 USER appuser

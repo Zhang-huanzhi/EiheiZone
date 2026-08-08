@@ -72,4 +72,5 @@ def test_post_response_does_not_expose_author_or_internal_fields() -> None:
         "visibility",
         "created_at",
         "updated_at",
+        "images",
     }

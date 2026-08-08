@@ -8,6 +8,7 @@ from app.modules.expenditures.router import router as expenditures_router
 from app.modules.auth.router import router as auth_router
 from app.modules.posts.router import public_router as public_posts_router
 from app.modules.posts.router import router as posts_router
+from app.modules.posts.image_router import media_router, router as uploads_router
 from app.modules.qas.router import router as qas_router
 
 
@@ -15,6 +16,8 @@ router = APIRouter()
 router.include_router(auth_router)
 router.include_router(public_posts_router)
 router.include_router(posts_router)
+router.include_router(uploads_router)
+router.include_router(media_router)
 router.include_router(qas_router)
 router.include_router(expenditures_router)
 router.include_router(dashboard_router)

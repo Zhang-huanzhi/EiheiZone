@@ -23,6 +23,13 @@ const dashboard: DashboardData = {
       visibility: "family",
       created_at: "2026-07-29T08:00:00Z",
       updated_at: "2026-07-29T08:00:00Z",
+      images: [{
+        id: "image-id",
+        url: "/api/v1/media/images/image-id",
+        position: 0,
+        width: 800,
+        height: 600,
+      }],
     }],
   },
   qas: {
@@ -85,6 +92,10 @@ describe("Dashboard pages", () => {
     expect(screen.getByRole("link", { name: /家庭近况/ })).toHaveAttribute(
       "href",
       "/family/posts/post-id",
+    );
+    expect(screen.getByRole("presentation", { hidden: true })).toHaveAttribute(
+      "src",
+      "/api/v1/media/images/image-id",
     );
     expect(screen.getByRole("link", { name: /最近的问题/ })).toHaveAttribute(
       "href",
