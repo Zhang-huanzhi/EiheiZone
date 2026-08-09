@@ -5,10 +5,10 @@ const familyLoginName = requiredEnvironment("E2E_FAMILY_LOGIN_NAME");
 const familyPassword = requiredEnvironment("E2E_FAMILY_PASSWORD");
 const ownerLoginName = requiredEnvironment("E2E_OWNER_LOGIN_NAME");
 const ownerPassword = requiredEnvironment("E2E_OWNER_PASSWORD");
-const appOrigin = new URL(process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000").origin;
 const runId = Date.now().toString(36);
 const publicPostTitle = `E2E-${runId}-公开近况`;
 const familyPostTitle = `E2E-${runId}-家庭近况`;
+const familyAuthoredPostTitle = `E2E-${runId}-Family成员近况`;
 const ownerQuestion = `E2E-${runId}-Owner问题`;
 const question = `E2E-${runId}-家庭问题`;
 const answer = `E2E-${runId}-当前回答`;
@@ -49,6 +49,7 @@ test("Public, Family, and Owner complete the V1 core workflow", async ({ page })
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "EiheiZone" })).toBeVisible();
   await expect(page.getByRole("link", { name: new RegExp(publicPostTitle) })).toBeVisible();
+  await expect(page.getByText("发布人：E2E Owner")).toBeVisible();
   await expect(page.getByText(familyPostTitle)).toHaveCount(0);
 
   const privateResponses = await Promise.all([
@@ -78,20 +79,12 @@ test("Public, Family, and Owner complete the V1 core workflow", async ({ page })
   await expect(page.getByRole("heading", { name: question })).toBeVisible();
   await expect(page.getByText("待回答", { exact: true })).toBeVisible();
 
+  await createPost(page, familyAuthoredPostTitle, "Family 成员发布的测试正文。", "family", "family");
+  await expect(page.getByRole("link", { name: new RegExp(familyAuthoredPostTitle) })).toBeVisible();
+  await expect(page.getByText("发布人：E2E Family")).toBeVisible();
+
   await page.goto("/owner");
   await expect(page.getByRole("heading", { name: "无权访问管理区域" })).toBeVisible();
-
-  const csrfResponse = await page.request.get("/api/v1/auth/csrf");
-  const csrfToken = (await csrfResponse.json()).csrf_token as string;
-  const forbiddenWrite = await page.request.post("/api/v1/posts", {
-    data: { title: "E2E 越权请求", body: "不应被创建" },
-    headers: {
-      Origin: appOrigin,
-      "X-CSRF-Token": csrfToken,
-    },
-  });
-  expect(forbiddenWrite.status()).toBe(403);
-  expect((await forbiddenWrite.json()).error.code).toBe("FORBIDDEN");
 
   await page.goto("/family");
   await logout(page);
@@ -120,8 +113,10 @@ test("Public, Family, and Owner complete the V1 core workflow", async ({ page })
   await expect(page.getByText(updatedExpenditureCategory)).toHaveCount(0);
 
   await page.goto("/owner/posts");
+  await expect(page.getByText("发布人：E2E Family")).toBeVisible();
   await deletePost(page, publicPostTitle);
   await deletePost(page, familyPostTitle);
+  await deletePost(page, familyAuthoredPostTitle);
 
   await page.goto("/family");
   await expect(page.getByRole("heading", { name: "家庭首页" })).toBeVisible();
@@ -173,14 +168,22 @@ async function logout(page: Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
-async function createPost(page: Page, title: string, body: string, visibility: "public" | "family") {
-  await page.goto("/owner/posts/new");
+async function createPost(
+  page: Page,
+  title: string,
+  body: string,
+  visibility: "public" | "family",
+  area: "owner" | "family" = "owner",
+) {
+  const newPostPath = `/${area}/posts/new`;
+  const postsPath = `/${area}/posts`;
+  await page.goto(newPostPath);
   const submitButton = await waitForFormHydration(page, "发布近况");
   await page.getByLabel("标题").fill(title);
   await page.getByLabel("正文").fill(body);
   await page.getByLabel("可见范围").selectOption(visibility);
   await submitButton.click();
-  await expect(page).toHaveURL(/\/owner\/posts$/);
+  await expect(page).toHaveURL(new RegExp(`${postsPath.replaceAll("/", "\\/")}$`));
   await expect(page.getByRole("link", { name: new RegExp(title) })).toBeVisible();
 }
 

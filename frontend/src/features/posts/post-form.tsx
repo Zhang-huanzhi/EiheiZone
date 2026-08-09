@@ -12,6 +12,7 @@ import { useHydrated } from "@/lib/use-hydrated";
 
 type PostFormProps = {
   initialPost?: PostRecord;
+  redirectPath?: string;
 };
 
 type FieldErrors = Partial<Record<"title" | "body" | "visibility", string>>;
@@ -22,7 +23,7 @@ const MAX_IMAGES = 9;
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-export function PostForm({ initialPost }: PostFormProps) {
+export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFormProps) {
   const router = useRouter();
   const isHydrated = useHydrated();
   const [title, setTitle] = useState(initialPost?.title ?? "");
@@ -95,12 +96,12 @@ export function PostForm({ initialPost }: PostFormProps) {
   async function submit(action: () => Promise<unknown>) {
     try {
       await action();
-      router.replace("/owner/posts");
+      router.replace(redirectPath);
       router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError) {
         if (error.status === 401) {
-          router.replace(`/login?next=${encodeURIComponent("/owner/posts")}`);
+          router.replace(`/login?next=${encodeURIComponent(redirectPath)}`);
           router.refresh();
           return;
         }

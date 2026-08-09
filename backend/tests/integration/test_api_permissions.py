@@ -1,13 +1,16 @@
 from types import SimpleNamespace
 from uuid import uuid4
+from io import BytesIO
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy.orm import Session
 
 import app.core.security as security
 import app.modules.auth.dependencies as auth_dependencies
 import app.modules.auth.router as auth_router
+import app.modules.posts.image_service as image_service
 from app.modules.auth.models import UserRole
 from app.modules.auth.service import create_user
 
@@ -67,7 +70,6 @@ def login_with_csrf(client: TestClient, login_name: str) -> str:
         ("post", "/api/v1/auth/logout", None),
         ("get", "/api/v1/posts", None),
         ("get", f"/api/v1/posts/{uuid4()}", None),
-        ("post", "/api/v1/posts", {"title": "Post", "body": "Body"}),
         ("patch", f"/api/v1/posts/{uuid4()}", {"title": "Updated"}),
         ("delete", f"/api/v1/posts/{uuid4()}", None),
         ("get", "/api/v1/qas", None),
@@ -107,7 +109,6 @@ def test_public_is_rejected_by_every_protected_operation(
 @pytest.mark.parametrize(
     ("method", "path", "payload"),
     [
-        ("post", "/api/v1/posts", {"title": "Post", "body": "Body"}),
         ("patch", f"/api/v1/posts/{uuid4()}", {"title": "Updated"}),
         ("delete", f"/api/v1/posts/{uuid4()}", None),
         ("put", f"/api/v1/qas/{uuid4()}/answer", {"answer": "Answer"}),
@@ -167,3 +168,46 @@ def test_owner_can_submit_a_question_with_valid_csrf(
     assert response.status_code == 201
     assert response.json()["status"] == "unanswered"
     assert response.json()["asked_by_display_name"] == "Permission Owner"
+
+
+def test_family_can_create_a_post_with_valid_csrf(
+    client: TestClient,
+    test_session: Session,
+) -> None:
+    csrf_token = login_with_csrf(
+        client,
+        create_account(test_session, UserRole.FAMILY),
+    )
+
+    response = client.post(
+        "/api/v1/posts",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": csrf_token},
+        json={"title": "Family post", "body": "Family content", "visibility": "family"},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["title"] == "Family post"
+
+
+def test_family_can_upload_a_post_image_with_valid_csrf(
+    client: TestClient,
+    test_session: Session,
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(image_service, "get_settings", lambda: SimpleNamespace(media_root=tmp_path))
+    csrf_token = login_with_csrf(
+        client,
+        create_account(test_session, UserRole.FAMILY),
+    )
+    image_data = BytesIO()
+    Image.new("RGB", (16, 16), "#2f6f62").save(image_data, format="JPEG")
+
+    response = client.post(
+        "/api/v1/uploads/image",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": csrf_token},
+        files={"file": ("family.jpg", image_data.getvalue(), "image/jpeg")},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["id"]

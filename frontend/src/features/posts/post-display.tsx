@@ -58,9 +58,10 @@ export function PostList({ page, detailBasePath, listPath, showVisibility = fals
                 <h2 className="min-w-0 text-lg font-medium">{post.title}</h2>
                 {showVisibility ? <PostVisibilityLabel visibility={post.visibility} /> : null}
               </div>
-              <p className="line-clamp-3 whitespace-pre-wrap text-sm text-muted-foreground">{post.body}</p>
               <PostImages images={post.images} interactive={false} />
-              <p className="text-xs text-muted-foreground">{formatDate(post.created_at)}</p>
+              <p className="text-xs text-muted-foreground">
+                发布人：{post.author_display_name} · {formatDate(post.created_at)}
+              </p>
             </Link>
           </li>
         ))}
@@ -96,7 +97,9 @@ export function PostDetail({ post, showVisibility = false }: PostDetailProps) {
           <h1 className="text-3xl font-semibold">{post.title}</h1>
           {showVisibility ? <PostVisibilityLabel visibility={post.visibility} /> : null}
         </div>
-        <p className="text-sm text-muted-foreground">发布于 {formatDate(post.created_at)}</p>
+        <p className="text-sm text-muted-foreground">
+          发布人：{post.author_display_name} · 发布于 {formatDate(post.created_at)}
+        </p>
       </header>
       <div className="whitespace-pre-wrap leading-7">{post.body}</div>
       <PostImages images={post.images} />

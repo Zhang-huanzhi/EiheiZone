@@ -18,6 +18,8 @@ const dashboard: DashboardData = {
     total: 1,
     items: [{
       id: "post-id",
+      author_id: "family-id",
+      author_display_name: "Family User",
       title: "家庭近况",
       body: "正文",
       visibility: "family",
@@ -93,6 +95,7 @@ describe("Dashboard pages", () => {
       "href",
       "/family/posts/post-id",
     );
+    expect(screen.getByRole("link", { name: /家庭近况/ })).toHaveTextContent("Family User");
     expect(screen.getByRole("presentation", { hidden: true })).toHaveAttribute(
       "src",
       "/api/v1/media/images/image-id",

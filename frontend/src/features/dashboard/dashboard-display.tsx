@@ -103,7 +103,7 @@ function RecentPosts({ section }: { section: DashboardSection<PostRecord> }) {
                   <PostVisibilityLabel visibility={post.visibility} />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {formatTimestamp(post.created_at)}
+                  发布人：{post.author_display_name} · {formatTimestamp(post.created_at)}
                 </p>
                 <PostImages images={post.images} interactive={false} />
               </Link>

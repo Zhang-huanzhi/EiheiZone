@@ -9,6 +9,7 @@ from app.core.pagination import PaginationParams
 from app.modules.auth.models import UserRole
 from app.modules.auth.service import create_user
 from app.modules.posts.models import PostVisibility
+from app.modules.posts.models import Post
 from app.modules.posts.schemas import PostCreate, PostUpdate
 from app.modules.posts.service import (
     create_post,
@@ -34,7 +35,7 @@ def create_account(test_session: Session, role: UserRole):
     )
 
 
-def test_post_services_enforce_visibility_and_owner_writes(test_session: Session) -> None:
+def test_post_services_enforce_visibility_and_family_creation(test_session: Session) -> None:
     owner = create_account(test_session, UserRole.OWNER)
     family = create_account(test_session, UserRole.FAMILY)
     family_post = create_post(
@@ -51,24 +52,38 @@ def test_post_services_enforce_visibility_and_owner_writes(test_session: Session
             visibility=PostVisibility.PUBLIC,
         ),
     )
+    family_created_post = create_post(
+        test_session,
+        user=family,
+        payload=PostCreate(title="Family authored", body="Family body"),
+    )
 
     public_page = list_public_posts_page(test_session, PaginationParams())
     family_page = list_posts_for_user(test_session, user=family, pagination=PaginationParams())
 
     assert [post.id for post in public_page.items] == [public_post.id]
-    assert {post.id for post in family_page.items} == {public_post.id, family_post.id}
+    assert {post.id for post in family_page.items} == {
+        public_post.id,
+        family_post.id,
+        family_created_post.id,
+    }
     assert get_post_for_user_or_404(test_session, user=family, post_id=family_post.id).id == family_post.id
     with pytest.raises(AppError, match="Post was not found"):
         get_public_post_or_404(test_session, family_post.id)
-    with pytest.raises(AppError) as error:
-        create_post(
+    assert family_created_post.author_id == family.id
+    assert family_created_post.author_display_name == family.display_name
+    assert test_session.get(Post, family_created_post.id).author_id == family.id
+    with pytest.raises(AppError) as update_error:
+        update_post(
             test_session,
             user=family,
-            payload=PostCreate(title="Forbidden", body="Forbidden body"),
+            post_id=family_created_post.id,
+            payload=PostUpdate(title="Not allowed"),
         )
-    assert error.value.status_code == 403
-
-
+    assert update_error.value.status_code == 403
+    with pytest.raises(AppError) as delete_error:
+        remove_post(test_session, user=family, post_id=family_created_post.id)
+    assert delete_error.value.status_code == 403
 def test_post_service_patches_only_supplied_fields_and_hard_deletes(test_session: Session) -> None:
     owner = create_account(test_session, UserRole.OWNER)
     created = create_post(
