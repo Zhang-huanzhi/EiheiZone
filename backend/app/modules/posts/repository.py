@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.modules.posts.models import Post, PostVisibility
 
@@ -18,7 +18,7 @@ def list_public_posts(db: Session, *, offset: int, limit: int) -> tuple[list[Pos
 def get_public_post(db: Session, post_id: UUID) -> Post | None:
     """Return one public post without revealing family-only records."""
 
-    statement = select(Post).where(
+    statement = select(Post).options(joinedload(Post.author)).where(
         Post.id == post_id,
         Post.visibility == PostVisibility.PUBLIC,
     )
@@ -34,7 +34,7 @@ def list_visible_posts(db: Session, *, offset: int, limit: int) -> tuple[list[Po
 def get_visible_post(db: Session, post_id: UUID) -> Post | None:
     """Return one post for an already authenticated Family or Owner reader."""
 
-    return db.scalar(select(Post).where(Post.id == post_id))
+    return db.scalar(select(Post).options(joinedload(Post.author)).where(Post.id == post_id))
 
 
 def add_post(db: Session, post: Post) -> None:
@@ -50,7 +50,11 @@ def delete_post(db: Session, post: Post) -> None:
 
 
 def _ordered_posts():
-    return select(Post).order_by(Post.created_at.desc(), Post.id.desc())
+    return (
+        select(Post)
+        .options(joinedload(Post.author))
+        .order_by(Post.created_at.desc(), Post.id.desc())
+    )
 
 
 def _list_and_count(

@@ -24,10 +24,14 @@ ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
 
 
 def upload_image(db: Session, *, user: User, upload: UploadFile) -> PostImage:
-    """Validate one upload and persist a sanitized pending WebP."""
+    """Validate one Family or Owner upload and persist a sanitized pending WebP."""
 
-    if user.role is not UserRole.OWNER:
-        raise AppError(status_code=403, code="FORBIDDEN", message="Owner access is required")
+    if user.role not in {UserRole.FAMILY, UserRole.OWNER}:
+        raise AppError(
+            status_code=403,
+            code="FORBIDDEN",
+            message="Family or Owner access is required",
+        )
     data = upload.file.read(MAX_FILE_SIZE + 1)
     if len(data) > MAX_FILE_SIZE:
         raise AppError(status_code=400, code="IMAGE_TOO_LARGE", message="Image must be 5 MB or smaller")
@@ -85,7 +89,7 @@ def upload_image(db: Session, *, user: User, upload: UploadFile) -> PostImage:
 
 
 def attach_images(db: Session, *, user: User, post: Post, image_ids: list[UUID]) -> None:
-    """Associate ordered pending uploads owned by the current Owner."""
+    """Associate ordered pending uploads owned by the current Family or Owner user."""
 
     if len(image_ids) > MAX_IMAGES or len(set(image_ids)) != len(image_ids):
         raise AppError(

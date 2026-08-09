@@ -55,9 +55,11 @@ def test_post_update_keeps_only_supplied_fields() -> None:
     assert payload.model_dump(exclude_unset=True) == {"title": "Updated title"}
 
 
-def test_post_response_does_not_expose_author_or_internal_fields() -> None:
+def test_post_response_exposes_client_safe_author_fields_only() -> None:
     response = PostResponse(
         id=uuid4(),
+        author_id=uuid4(),
+        author_display_name="Post Author",
         title="Update",
         body="Body",
         visibility=PostVisibility.PUBLIC,
@@ -67,6 +69,8 @@ def test_post_response_does_not_expose_author_or_internal_fields() -> None:
 
     assert set(response.model_dump()) == {
         "id",
+        "author_id",
+        "author_display_name",
         "title",
         "body",
         "visibility",

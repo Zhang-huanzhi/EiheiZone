@@ -11,7 +11,7 @@ from app.db.session import get_db
 from app.modules.auth.dependencies import (
     CurrentUser,
     get_current_user_optional,
-    require_owner,
+    require_family_access,
     validate_csrf_request,
 )
 from app.modules.posts.image_service import get_image_for_reader, image_path, upload_image
@@ -25,7 +25,7 @@ media_router = APIRouter(prefix="/media", tags=["media"])
 def upload_image_endpoint(
     request: Request,
     file: UploadFile = File(...),
-    current_user: CurrentUser = Depends(require_owner),
+    current_user: CurrentUser = Depends(require_family_access),
     db: Session = Depends(get_db),
 ) -> PostImageResponse:
     validate_csrf_request(request, current_user.session_id)

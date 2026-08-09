@@ -1,4 +1,4 @@
-"""Database model for Owner-authored status posts."""
+"""Database models for Family- or Owner-authored status posts."""
 
 from datetime import UTC, datetime
 from enum import Enum
@@ -44,7 +44,7 @@ def enum_values(enum_class: type[Enum]) -> list[str]:
 
 
 class Post(Base):
-    """A short update authored and managed by an Owner."""
+    """A short update authored by Family or Owner and managed by an Owner."""
 
     __tablename__ = "posts"
     # noinspection SpellCheckingInspection
@@ -97,7 +97,7 @@ class Post(Base):
 
 
 class PostImage(Base):
-    """One processed WebP uploaded by an Owner for a Post."""
+    """One processed WebP uploaded by a Family or Owner user for a Post."""
 
     __tablename__ = "post_images"
     __table_args__ = (

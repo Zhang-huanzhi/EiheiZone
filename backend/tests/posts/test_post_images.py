@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 import app.modules.posts.image_service as image_service
 from app.modules.auth.models import UserRole
 from app.modules.auth.service import create_user
-from app.modules.posts.models import PostImageStatus, PostVisibility
+from app.modules.posts.models import Post, PostImageStatus, PostVisibility
 from app.modules.posts.schemas import PostCreate
 from app.modules.posts.service import create_post, remove_post
 
@@ -31,6 +31,16 @@ def create_owner(test_session: Session):
         login_name=f"post-image-owner-{uuid4().hex}",
         display_name="Post Image Owner",
         role=UserRole.OWNER,
+        plain_password=PASSWORD,
+    )
+
+
+def create_family(test_session: Session):
+    return create_user(
+        test_session,
+        login_name=f"post-image-family-{uuid4().hex}",
+        display_name="Post Image Family",
+        role=UserRole.FAMILY,
         plain_password=PASSWORD,
     )
 
@@ -81,3 +91,23 @@ def test_remove_post_deletes_attached_file(
     remove_post(test_session, user=owner, post_id=post.id)
 
     assert not stored_path.exists()
+
+
+def test_family_can_upload_and_attach_images(
+    test_session: Session,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(image_service, "get_settings", lambda: SimpleNamespace(media_root=tmp_path))
+    family = create_family(test_session)
+    image = image_service.upload_image(test_session, user=family, upload=make_image_upload())
+
+    post = create_post(
+        test_session,
+        user=family,
+        payload=PostCreate(title="Family image", body="Family image body", image_ids=[image.id]),
+    )
+
+    assert test_session.get(Post, post.id).author_id == family.id
+    assert post.images[0].id == image.id
+    assert image.owner_id == family.id

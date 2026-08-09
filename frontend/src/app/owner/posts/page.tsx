@@ -39,6 +39,7 @@ export default async function OwnerPostsPage({ searchParams }: OwnerPostsPagePro
                 </Link>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
                   <PostVisibilityLabel visibility={post.visibility} />
+                  <span>发布人：{post.author_display_name}</span>
                   <span>{new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Shanghai" }).format(new Date(post.created_at))}</span>
                 </div>
               </div>

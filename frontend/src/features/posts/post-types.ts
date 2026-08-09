@@ -2,6 +2,8 @@ export type PostVisibility = "public" | "family";
 
 export type PostRecord = {
   id: string;
+  author_id: string;
+  author_display_name: string;
   title: string;
   body: string;
   visibility: PostVisibility;

@@ -43,7 +43,7 @@ def _validate_body(value: str) -> str:
 
 
 class PostCreate(BaseModel):
-    """Accept the fields Owner may set when publishing a post."""
+    """Accept the fields Family or Owner may set when publishing a post."""
 
     title: str
     body: str
@@ -91,11 +91,13 @@ class PostUpdate(BaseModel):
 
 
 class PostResponse(BaseModel):
-    """Return only Post data that pages need to render."""
+    """Return Post data and the author's client-safe identity."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    author_id: UUID
+    author_display_name: str = Field(min_length=1, max_length=80)
     title: str = Field(min_length=1, max_length=MAX_TITLE_LENGTH)
     body: str = Field(min_length=1, max_length=MAX_BODY_LENGTH)
     visibility: PostVisibility

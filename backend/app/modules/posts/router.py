@@ -56,7 +56,7 @@ def get_post(
 def create_post_endpoint(
     payload: PostCreate,
     request: Request,
-    current_user: CurrentUser = Depends(require_owner),
+    current_user: CurrentUser = Depends(require_family_access),
     db: Session = Depends(get_db),
 ) -> PostResponse:
     validate_csrf_request(request, current_user.session_id)

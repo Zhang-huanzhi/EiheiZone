@@ -96,9 +96,6 @@ try {
     Get-Content -LiteralPath $frontendError -ErrorAction SilentlyContinue | Select-Object -Last 40
     $exitCode = 1
 } finally {
-    while ((Get-Location).Path -ne $frontendDirectory) {
-        Pop-Location
-    }
     foreach ($port in @($frontendPort, $backendPort)) {
         Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue |
             ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }

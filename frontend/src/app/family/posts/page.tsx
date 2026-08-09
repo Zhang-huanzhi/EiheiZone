@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { BackLink } from "@/components/navigation/back-link";
+import { buttonVariants } from "@/components/ui/button";
 import { redirect } from "next/navigation";
 
 import { PostList } from "@/features/posts/post-display";
@@ -16,9 +18,12 @@ export default async function FamilyPostsPage({ searchParams }: FamilyPostsPageP
   return (
     <section className="space-y-6">
       <BackLink href="/family">返回家庭首页</BackLink>
-      <header className="space-y-2">
-        <h2 className="text-2xl font-semibold">近况分享</h2>
-        <p className="text-muted-foreground">查看公开和仅家人可见的近况。</p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold">近况分享</h2>
+          <p className="text-muted-foreground">查看公开和仅家人可见的近况。</p>
+        </div>
+        <Link className={buttonVariants()} href="/family/posts/new">发布近况</Link>
       </header>
       <PostList detailBasePath="/family/posts" listPath="/family/posts" page={page} showVisibility />
     </section>

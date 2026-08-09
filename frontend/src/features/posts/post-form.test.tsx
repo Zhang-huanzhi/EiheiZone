@@ -48,6 +48,18 @@ describe("PostForm", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it("uses a custom redirect path for Family publishing", async () => {
+    const user = userEvent.setup();
+    mockedCreatePost.mockResolvedValue({} as never);
+    render(<PostForm redirectPath="/family/posts" />);
+
+    await user.type(screen.getByLabelText("标题"), "Family update");
+    await user.type(screen.getByLabelText("正文"), "Family body");
+    await user.click(screen.getByRole("button", { name: "发布近况" }));
+
+    expect(replace).toHaveBeenCalledWith("/family/posts");
+  });
+
   it("sends only changed fields when editing", async () => {
     const user = userEvent.setup();
     mockedUpdatePost.mockResolvedValue({} as never);
@@ -55,6 +67,8 @@ describe("PostForm", () => {
       <PostForm
         initialPost={{
           id: "post-id",
+          author_id: "owner-id",
+          author_display_name: "Owner User",
           title: "Original",
           body: "Original body",
           visibility: "family",
@@ -77,6 +91,8 @@ describe("PostForm", () => {
       <PostForm
         initialPost={{
           id: "post-id",
+          author_id: "owner-id",
+          author_display_name: "Owner User",
           title: "Original",
           body: "Original body",
           visibility: "family",

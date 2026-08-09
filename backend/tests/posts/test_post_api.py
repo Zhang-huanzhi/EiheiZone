@@ -86,6 +86,9 @@ def test_public_api_never_returns_family_only_posts(client: TestClient, test_ses
 
     assert list_response.status_code == 200
     assert [item["id"] for item in list_response.json()["items"]] == [str(public_post.id)]
+    assert list_response.json()["items"][0]["author_id"] == str(owner.id)
+    assert list_response.json()["items"][0]["author_display_name"] == "API Owner"
+    assert "login_name" not in list_response.json()["items"][0]
     assert family_detail.status_code == 404
     assert family_detail.json()["error"]["code"] == "POST_NOT_FOUND"
     assert public_detail.status_code == 200
@@ -118,6 +121,7 @@ def test_authenticated_readers_and_owner_write_permissions(client: TestClient, t
 
     assert readable.status_code == 200
     assert readable.json()["items"][0]["id"] == post_id
+    assert readable.json()["items"][0]["author_display_name"] == "Owner API User"
     assert forbidden.status_code == 403
 
 
