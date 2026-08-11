@@ -19,6 +19,7 @@ services:
       - internal
 
   backend:
+    image: eiheizone-backend:${DEPLOY_IMAGE_TAG:-latest}
     build:
       context: ./backend
     restart: unless-stopped
@@ -53,6 +54,7 @@ services:
       - internal
 
   frontend:
+    image: eiheizone-frontend:${DEPLOY_IMAGE_TAG:-latest}
     build:
       context: ./frontend
       args:

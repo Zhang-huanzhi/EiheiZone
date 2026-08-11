@@ -20,6 +20,9 @@ backend/htmlcov/
 .env.*
 !.env.example
 
+# Local deployment state
+.deploy/
+
 # Frontend
 frontend/node_modules/
 frontend/.next/
