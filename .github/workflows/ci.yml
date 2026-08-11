@@ -17,6 +17,24 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    env:
+      CSRF_SECRET: test-csrf-secret-with-at-least-thirty-two-characters
+      DATABASE_URL: postgresql+psycopg://eiheizone_app:test-password@127.0.0.1:5432/eiheizone_test
+      TEST_DATABASE_URL: postgresql+psycopg://eiheizone_app:test-password@127.0.0.1:5432/eiheizone_test
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: eiheizone_test
+          POSTGRES_USER: eiheizone_app
+          POSTGRES_PASSWORD: test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U eiheizone_app -d eiheizone_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     defaults:
       run:
         working-directory: backend
@@ -39,7 +57,9 @@ jobs:
         run: uv run ruff check .
 
       - name: Test
-        run: uv run pytest
+        run: |
+          uv run alembic -x database=test upgrade head
+          uv run pytest
 
   frontend:
     name: Frontend
