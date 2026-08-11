@@ -50,4 +50,4 @@ jobs:
           -o IdentitiesOnly=yes
           -o StrictHostKeyChecking=yes
           "$SSH_USER@$SSH_HOST"
-          bash /srv/eiheizone/deploy.sh
+          bash /opt/eiheizone/deploy.sh

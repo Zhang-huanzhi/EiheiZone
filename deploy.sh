@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
-readonly PROJECT_DIR="/srv/eiheizone"
+readonly PROJECT_DIR="/opt/eiheizone"
 readonly STATE_DIR="${PROJECT_DIR}/.deploy"
 readonly TARGET_BRANCH="main"
 readonly HEALTHCHECK_URL="https://eihei.zone/api/v1/health"
