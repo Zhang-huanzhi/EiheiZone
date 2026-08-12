@@ -41,11 +41,11 @@ const dashboard: DashboardData = {
       asked_by: "family-id",
       asked_by_display_name: "Family User",
       question: "最近的问题",
-      answer: null,
-      answered_by: null,
-      answered_by_display_name: null,
-      status: "unanswered",
-      answered_at: null,
+      answer: "已经安排好了。",
+      answered_by: "owner-id",
+      answered_by_display_name: "Owner User",
+      status: "answered",
+      answered_at: "2026-07-29T09:00:00Z",
       created_at: "2026-07-29T08:00:00Z",
       updated_at: "2026-07-29T08:00:00Z",
     }],
@@ -67,10 +67,21 @@ const dashboard: DashboardData = {
   },
   unanswered_qas: {
     total: 1,
-    items: [],
+    items: [{
+      id: "pending-qa-id",
+      asked_by: "family-id",
+      asked_by_display_name: "Family User",
+      question: "待回答的问题",
+      answer: null,
+      answered_by: null,
+      answered_by_display_name: null,
+      status: "unanswered",
+      answered_at: null,
+      created_at: "2026-07-29T08:00:00Z",
+      updated_at: "2026-07-29T08:00:00Z",
+    }],
   },
 };
-dashboard.unanswered_qas.items = [...dashboard.qas.items];
 
 const emptyDashboard: DashboardData = {
   posts: { items: [], total: 0 },
@@ -104,6 +115,7 @@ describe("Dashboard pages", () => {
       "href",
       "/family/qas/qa-id",
     );
+    expect(screen.getByRole("link", { name: /最近的问题/ })).toHaveTextContent("回答于");
     expect(screen.getByText("CNY 1,234.56")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "近况管理" })).not.toBeInTheDocument();
   });
@@ -131,10 +143,11 @@ describe("Dashboard pages", () => {
       "/family/qas/new",
     );
     expect(screen.getByRole("heading", { name: "待回答问题" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /最近的问题/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /待回答的问题/ })).toHaveAttribute(
       "href",
-      "/owner/qas/qa-id",
+      "/owner/qas/pending-qa-id",
     );
+    expect(screen.queryByText(/回答于/)).not.toBeInTheDocument();
   });
 
   it("keeps module-specific empty states distinct from request failures", async () => {

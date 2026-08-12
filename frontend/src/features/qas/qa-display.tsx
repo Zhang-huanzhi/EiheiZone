@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CircleCheck, Clock3 } from "lucide-react";
 
 import { EmptyState } from "@/components/feedback/empty-state";
 import type { QAPage, QARecord } from "@/features/qas/qa-types";
@@ -10,9 +11,13 @@ type QAListProps = {
 };
 
 export function QAStatusLabel({ status }: Pick<QARecord, "status">) {
+  const isAnswered = status === "answered";
+  const Icon = isAnswered ? CircleCheck : Clock3;
+
   return (
-    <span className="text-xs font-medium text-muted-foreground">
-      {status === "answered" ? "已回答" : "待回答"}
+    <span className="inline-flex w-fit shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground">
+      <Icon aria-hidden="true" className="size-3.5" />
+      {isAnswered ? "已回答" : "待回答"}
     </span>
   );
 }
@@ -32,14 +37,22 @@ export function QAList({ page, detailBasePath, listPath }: QAListProps) {
       <ol className="divide-y divide-border border-y border-border">
         {page.items.map((qa) => (
           <li className="py-4" key={qa.id}>
-            <Link className="block space-y-2 hover:text-primary" href={`${detailBasePath}/${qa.id}`}>
-              <div className="flex items-start justify-between gap-4">
-                <h3 className="min-w-0 break-words text-lg font-medium">{qa.question}</h3>
+            <Link
+              className="block rounded-md px-3 py-3 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              href={`${detailBasePath}/${qa.id}`}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                <h3 className="min-w-0 break-words text-base leading-6 font-medium sm:text-lg">
+                  {qa.question}
+                </h3>
                 <QAStatusLabel status={qa.status} />
               </div>
-              <p className="text-sm text-muted-foreground">
-                {qa.asked_by_display_name} · {formatDate(qa.created_at)}
-              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                <span>{qa.asked_by_display_name} 提问于 {formatDate(qa.created_at)}</span>
+                {qa.status === "answered" && qa.answered_at ? (
+                  <span>回答于 {formatDate(qa.answered_at)}</span>
+                ) : null}
+              </div>
             </Link>
           </li>
         ))}
