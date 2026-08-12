@@ -47,12 +47,29 @@ describe("QA display", () => {
     expect(screen.getByText(/Owner User 回答于/)).toBeInTheDocument();
   });
 
-  it("links the family-wide list to the requested page area", () => {
+  it("shows the answer time only for answered list items", () => {
     render(
       <QAList
         detailBasePath="/family/qas"
         listPath="/family/qas"
-        page={{ items: [unansweredQA], total: 1, offset: 0, limit: 20 }}
+        page={{
+          items: [
+            unansweredQA,
+            {
+              ...unansweredQA,
+              id: "answered-qa-id",
+              question: "What happened?",
+              answer: "Everything is on schedule.",
+              answered_by: "owner-id",
+              answered_by_display_name: "Owner User",
+              status: "answered",
+              answered_at: "2026-07-27T01:00:00Z",
+            },
+          ],
+          total: 2,
+          offset: 0,
+          limit: 20,
+        }}
       />,
     );
 
@@ -60,6 +77,13 @@ describe("QA display", () => {
       "href",
       "/family/qas/qa-id",
     );
-    expect(screen.getByText(/Family User/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /What happened/ })).toHaveAttribute(
+      "href",
+      "/family/qas/answered-qa-id",
+    );
+    expect(screen.getAllByText(/Family User/)).toHaveLength(2);
+    expect(screen.getByText(/回答于/)).toBeInTheDocument();
+    expect(screen.getAllByText(/回答于/)).toHaveLength(1);
+    expect(screen.getByText("待回答")).toHaveClass("shrink-0");
   });
 });

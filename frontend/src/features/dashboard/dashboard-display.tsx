@@ -157,6 +157,9 @@ function RecentQAs({
                 <p className="text-xs text-muted-foreground">
                   {qa.asked_by_display_name} · {formatTimestamp(qa.created_at)}
                 </p>
+                {qa.status === "answered" && qa.answered_at ? (
+                  <p className="text-xs text-muted-foreground">回答于 {formatTimestamp(qa.answered_at)}</p>
+                ) : null}
               </Link>
             </li>
           ))}
