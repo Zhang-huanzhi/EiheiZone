@@ -78,6 +78,24 @@ describe("QA forms", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it("submits an Owner question and opens the Owner detail", async () => {
+    const user = userEvent.setup();
+    mockedCreateQuestion.mockResolvedValue(unansweredQA);
+    render(
+      <QuestionForm
+        newQuestionPath="/owner/qas/new"
+        redirectBasePath="/owner/qas"
+      />,
+    );
+
+    await user.type(screen.getByLabelText("问题"), "Owner question");
+    await user.click(screen.getByRole("button", { name: "提交问题" }));
+
+    expect(mockedCreateQuestion).toHaveBeenCalledWith({ question: "Owner question" });
+    expect(replace).toHaveBeenCalledWith("/owner/qas/qa-id");
+    expect(refresh).toHaveBeenCalled();
+  });
+
   it("does not send an unchanged replacement answer", async () => {
     const user = userEvent.setup();
     render(

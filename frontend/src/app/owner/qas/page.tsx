@@ -25,7 +25,7 @@ export default async function OwnerQAsPage({ searchParams }: OwnerQAsPageProps) 
           <h2 className="text-2xl font-semibold">问答管理</h2>
           <p className="text-muted-foreground">查看问题并保存当前回答。</p>
         </div>
-        <Link className={buttonVariants()} href="/family/qas/new">
+        <Link className={buttonVariants()} href="/owner/qas/new">
           <MessageCircleQuestion data-icon="inline-start" />
           提出问题
         </Link>

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import FamilyQAsPage from "@/app/family/qas/page";
 import NewQuestionPage from "@/app/family/qas/new/page";
 import OwnerQAsPage from "@/app/owner/qas/page";
+import OwnerNewQuestionPage from "@/app/owner/qas/new/page";
 import { getServerCurrentUser } from "@/features/auth/auth-server";
 import { getServerQAs } from "@/features/qas/qa-server";
 
@@ -66,9 +67,22 @@ describe("QA pages", () => {
     expect(screen.getByText("qa list /owner/qas")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "提出问题" })).toHaveAttribute(
       "href",
-      "/family/qas/new",
+      "/owner/qas/new",
     );
     expect(screen.queryByRole("button", { name: /删除/ })).not.toBeInTheDocument();
+  });
+
+  it("keeps the Owner question page inside Owner management", () => {
+    render(<OwnerNewQuestionPage />);
+
+    expect(screen.getByRole("link", { name: "返回问答管理" })).toHaveAttribute(
+      "href",
+      "/owner/qas",
+    );
+    expect(screen.getByRole("link", { name: "取消" })).toHaveAttribute(
+      "href",
+      "/owner/qas",
+    );
   });
 
   it("lets Owner open the Family question page", async () => {
