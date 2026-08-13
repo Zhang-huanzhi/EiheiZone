@@ -273,7 +273,7 @@ export function OwnerWorkspace({ data }: { data: DashboardData }) {
               <p className="text-sm text-muted-foreground">选择要处理的内容模块</p>
             </div>
           </div>
-          <Link className={buttonVariants({ size: "sm" })} href="/family/qas/new">
+          <Link className={buttonVariants({ size: "sm" })} href="/owner/qas/new">
             <MessageCircleQuestion data-icon="inline-start" />
             提出问题
           </Link>

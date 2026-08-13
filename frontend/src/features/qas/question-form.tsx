@@ -11,7 +11,15 @@ import { useHydrated } from "@/lib/use-hydrated";
 
 const MAX_QUESTION_LENGTH = 2000;
 
-export function QuestionForm() {
+type QuestionFormProps = {
+  redirectBasePath?: string;
+  newQuestionPath?: string;
+};
+
+export function QuestionForm({
+  redirectBasePath = "/family/qas",
+  newQuestionPath = "/family/qas/new",
+}: QuestionFormProps) {
   const router = useRouter();
   const isHydrated = useHydrated();
   const [question, setQuestion] = useState("");
@@ -35,12 +43,12 @@ export function QuestionForm() {
     setIsSubmitting(true);
     try {
       const created = await createQuestion({ question });
-      router.replace(`/family/qas/${created.id}`);
+      router.replace(`${redirectBasePath}/${created.id}`);
       router.refresh();
     } catch (error) {
       if (error instanceof ApiRequestError) {
         if (error.status === 401) {
-          router.replace("/login?next=%2Ffamily%2Fqas%2Fnew");
+          router.replace(`/login?next=${encodeURIComponent(newQuestionPath)}`);
           router.refresh();
           return;
         }
