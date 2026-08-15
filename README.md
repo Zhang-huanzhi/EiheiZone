@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 EiheiZone is a private family information portal for sharing life updates, answering family questions, and recording significant expenses. It combines a public-facing feed with role-protected family and owner workspaces in one responsive web application.
 
-**V1 status:** released and accepted on August 5, 2026 for small-scale family use.
+**Current version:** v1.1.0, accepted for release on August 15, 2026. The Git tag is created after the release commit is merged and production verification succeeds.
 
 **Production site:** [https://eihei.zone](https://eihei.zone)
 
@@ -12,17 +12,18 @@ EiheiZone is a private family information portal for sharing life updates, answe
   <img src="frontend/public/screenshots/login-mobile.png" alt="EiheiZone mobile login screen" width="280">
 </p>
 
-> The V1 user interface is in Simplified Chinese. The English, Chinese, and Japanese options above are README translations, not application localization.
+> The application interface is in Simplified Chinese. The English, Chinese, and Japanese options above are README translations, not application localization.
 
 ## Features
 
 - **Role-based access:** separate Public, Family, and Owner experiences, enforced by the backend.
-- **Posts:** Owner-managed life updates with `public` or `family` visibility.
-- **Family Q&A:** Family and Owner users can ask questions; the Owner can answer them.
+- **Posts:** Family and Owner users can publish text or image updates with `public` or `family` visibility; the Owner manages all Posts.
+- **Post images:** up to nine permission-checked images per Post, normalized to WebP and stored in a persistent media volume.
+- **Family Q&A:** Family and Owner users can ask questions in their own workspace; the Owner can answer them, with answer times visible in lists.
 - **Significant expenses:** private family records with exact decimal amounts and ISO 4217 currency codes.
 - **Dashboard:** recent Posts, Q&A, and expenses aggregated without a separate dashboard table.
 - **Installable experience:** responsive web UI, PWA manifest, and production HTTPS deployment.
-- **Operational tooling:** Alembic migrations, account maintenance scripts, health checks, and automated tests.
+- **Operational tooling:** Alembic migrations, account and media maintenance scripts, required CI checks, automatic SSH deployment, health checks, and commit-based rollback.
 
 ## Roles and permissions
 
@@ -30,13 +31,14 @@ EiheiZone is a private family information portal for sharing life updates, answe
 | --- | :---: | :---: | :---: |
 | View public Posts | Yes | Yes | Yes |
 | View family-only Posts | No | Yes | Yes |
+| Publish text or image Posts | No | Yes | Yes |
 | Ask and view family questions | No | Yes | Yes |
 | View significant expenses | No | Yes | Yes |
 | View the family Dashboard | No | Yes | Yes |
-| Manage Posts and expenses | No | No | Yes |
+| Manage all Posts and expenses | No | No | Yes |
 | Answer questions and use Owner Workspace | No | No | Yes |
 
-V1 has no public registration or user-management page. Trusted operators create accounts and reset passwords with backend scripts.
+The application has no public registration or user-management page. Trusted operators create accounts and reset passwords with backend scripts.
 
 ## Architecture
 
@@ -67,6 +69,7 @@ The browser uses one site origin. Next.js handles pages and interaction, while F
 
 ```text
 eiheizone/
+|-- .github/workflows/   # CI and production deployment workflows
 |-- backend/
 |   |-- alembic/          # Database migrations
 |   |-- app/
@@ -84,7 +87,7 @@ eiheizone/
 `-- deploy.env.example
 ```
 
-Formal project documentation: [`docs/README.md`](docs/README.md). The V1 archive is in [`docs/versions/v1/`](docs/versions/v1/), and later changes are recorded in [`docs/iterations/`](docs/iterations/).
+Formal project documentation: [`docs/README.md`](docs/README.md). Release archives are in [`docs/versions/`](docs/versions/), including [`v1.1.0`](docs/versions/v1.1/); active work is recorded in [`docs/iterations/`](docs/iterations/).
 
 ## Local setup
 
@@ -200,21 +203,15 @@ The E2E runner targets only `eiheizone_test`, creates synthetic accounts, and te
 
 ## Production deployment
 
-The included Compose deployment runs PostgreSQL 17, FastAPI, Next.js, and Caddy on one host. It is currently configured for `eihei.zone` in `Caddyfile` and `docker-compose.yml`.
+Production runs PostgreSQL 17, FastAPI, Next.js, and Caddy on one Docker Compose host. Pull requests must pass Backend, Frontend, and Deployment artifacts checks. After a successful `main` CI run, GitHub Actions connects with a pinned SSH host key and invokes `/opt/eiheizone/deploy.sh`; the script fast-forwards `main`, tags images with the full commit SHA, waits for Compose, and checks the public health endpoint.
 
-```powershell
-Copy-Item deploy.env.example .env
-# Replace every placeholder and review the domain before starting services.
-docker compose up -d --build
-docker compose ps
-```
+The server keeps its production `.env`, deployment state, database, and media volume outside Git. `rollback.sh` restores the previous stable commit without deleting volumes or reversing Alembic migrations. See [`docs/operations.md`](docs/operations.md) for setup, rollback, media cleanup, backup, and recovery boundaries.
 
-FastAPI runs `alembic upgrade head` before starting. Only Caddy exposes host ports; the application and database remain on the internal Compose network. Keep the production `.env`, database backups, SSH keys, and Android signing material outside Git.
-
-## V1 boundaries and known risks
+## v1.1 boundaries and known risks
 
 - The application UI is Chinese-only and requires a network connection; there is no offline family-data cache.
-- V1 excludes registration, invitations, self-service password recovery, file uploads, comments, chat, notifications, search, AI, and complete accounting/reporting.
-- Production data is persisted in a Docker named volume. Off-host encrypted backup and recovery testing are deferred, so host loss can cause permanent data loss.
-- The V1 release accepted known production dependency audit findings. Re-run the dependency audit and complete a regression test before broader deployment.
+- The application excludes registration, invitations, self-service password recovery, general file attachments beyond Post images, comments, chat, notifications, search, AI, and complete accounting/reporting.
+- Published Post images cannot yet be added, removed, or reordered; orphan image cleanup is a manual maintenance action.
+- PostgreSQL and Post images are persisted in Docker named volumes. Off-host encrypted backup and recovery testing are deferred, so host loss can cause permanent data loss.
+- Re-run dependency audits and the full regression suite before broader deployment.
 - This repository does not contain production secrets, real family data, Android signing keys, or distributable Android packages.

@@ -1,0 +1,54 @@
+@startuml
+!theme plain
+
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam roundcorner 6
+skinparam ArrowColor #475569
+skinparam ArrowThickness 1.2
+skinparam DefaultTextAlignment center
+skinparam nodesep 45
+skinparam ranksep 55
+
+skinparam rectangle {
+  BackgroundColor #F8FAFC
+  BorderColor #CBD5E1
+  FontColor #0F172A
+}
+
+skinparam database {
+  BackgroundColor #EFF6FF
+  BorderColor #60A5FA
+  FontColor #0F172A
+}
+
+title EiheiZone v1.1 - Production Container Architecture
+
+actor "Public / Family / Owner" as user
+rectangle "Caddy\nHTTPS / Reverse Proxy" as caddy
+rectangle "Next.js 16 / React 19\n页面、路由、交互" as frontend
+rectangle "FastAPI\n认证、授权、业务、图片处理" as backend
+database "PostgreSQL 17\n业务数据与 Session" as db
+collections "media_data\nWebP 图片文件" as media
+
+cloud "GitHub Actions\nCI + Deploy" as actions
+rectangle "deploy.sh / rollback.sh\n完整 commit SHA + 健康检查" as release
+
+user -right-> caddy : HTTPS
+caddy -right-> frontend : 页面请求
+caddy -down-> backend : /api/*
+frontend -down-> backend : Server-side API
+backend -right-> db : SQLAlchemy / 事务
+backend -down-> media : 鉴权读写
+
+actions -right-> release : 固定 host key 的 SSH
+release ..> backend : Docker Compose\n构建与更新
+release ..> caddy : 就绪与公网健康检查
+
+legend bottom
+  Caddy、Next.js、FastAPI、PostgreSQL 与 media_data
+  均运行在同一台生产服务器的 Docker Compose 项目中。
+endlegend
+
+@enduml
