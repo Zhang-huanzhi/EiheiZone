@@ -10,6 +10,7 @@ const publicPostTitle = `E2E-${runId}-公开近况`;
 const familyPostTitle = `E2E-${runId}-家庭近况`;
 const familyAuthoredPostTitle = `E2E-${runId}-Family成员近况`;
 const ownerQuestion = `E2E-${runId}-Owner问题`;
+const ownerAnswer = `E2E-${runId}-Owner区域回答`;
 const question = `E2E-${runId}-家庭问题`;
 const answer = `E2E-${runId}-当前回答`;
 const expenditureCategory = `E2E-${runId}-测试分类`;
@@ -18,17 +19,22 @@ const updatedExpenditureCategory = `${expenditureCategory}-已更新`;
 
 test.describe.configure({ mode: "serial" });
 
-test("Public, Family, and Owner complete the V1 core workflow", async ({ page }) => {
+test("Public, Family, and Owner complete the v1.1 core workflow", async ({ page }) => {
   await login(page, ownerLoginName, ownerPassword, /\/owner$/);
 
   await page.getByRole("link", { name: "提出问题" }).click();
-  await expect(page).toHaveURL(/\/family\/qas\/new$/);
+  await expect(page).toHaveURL(/\/owner\/qas\/new$/);
   await waitForFormHydration(page, "提交问题");
   await page.getByLabel("问题").fill(ownerQuestion);
   await page.getByRole("button", { name: "提交问题" }).click();
-  await expect(page).toHaveURL(/\/family\/qas\/[0-9a-f-]+$/);
+  await expect(page).toHaveURL(/\/owner\/qas\/[0-9a-f-]+$/);
   await expect(page.getByRole("heading", { name: ownerQuestion })).toBeVisible();
   await expect(page.getByText("待回答", { exact: true })).toBeVisible();
+  await waitForFormHydration(page, "保存回答");
+  await page.getByLabel("回答").fill(ownerAnswer);
+  await page.getByRole("button", { name: "保存回答" }).click();
+  await expect(page).toHaveURL(/\/owner\/qas$/);
+  await expect(page.getByRole("link", { name: new RegExp(ownerQuestion) })).toContainText("已回答");
 
   await createPost(page, publicPostTitle, "虚构的公开测试正文。", "public");
   await createPost(page, familyPostTitle, "虚构的家庭测试正文。", "family");
@@ -143,7 +149,14 @@ test("representative pages do not overflow at mobile and desktop viewports", asy
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await login(page, ownerLoginName, ownerPassword, /\/owner$/);
-  for (const path of ["/owner", "/owner/posts", "/owner/qas", "/owner/expenditures", "/owner/posts/new"]) {
+  for (const path of [
+    "/owner",
+    "/owner/posts",
+    "/owner/qas",
+    "/owner/qas/new",
+    "/owner/expenditures",
+    "/owner/posts/new",
+  ]) {
     await page.goto(path);
     await expectNoHorizontalOverflow(page);
   }
