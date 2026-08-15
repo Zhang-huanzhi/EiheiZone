@@ -73,11 +73,11 @@
 
 ### 3.4 生命周期
 
-![img.png](_附件_/img.png)
+![Post 图片上传、绑定与清理流程](_附件_/post-image-lifecycle.png)
 
 说明：上传后未发布时，只会留下未关联的 `pending` 图片记录；超过 24 小时可手动清理。
 
-说明：本文档只保留 PlantUML 源码；如果需要在 Markdown 里放图，请先导出到同级 `_附件_/` 目录，再用相对链接引用，不要直接把剪贴板图片粘到正文里。
+PlantUML 源文件：[`_附件_/post-image-lifecycle.puml`](_附件_/post-image-lifecycle.puml)。导出图和源文件一同归档，后续修改流程时必须同步更新两者。
 
 ## 4. 验收与测试计划（Acceptance & Testing）
 

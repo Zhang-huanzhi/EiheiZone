@@ -1,0 +1,38 @@
+@startuml
+!theme plain
+
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam roundcorner 6
+skinparam ArrowColor #475569
+skinparam ArrowThickness 1.2
+skinparam DefaultTextAlignment center
+
+actor "Family / Owner" as user
+participant "Next.js" as frontend
+participant "FastAPI" as api
+database "PostgreSQL" as db
+collections "media_data" as media
+
+user -> frontend : 选择图片并预览
+frontend -> api : POST /api/v1/uploads/image
+api -> api : 校验格式、大小与尺寸\n重新编码为 WebP
+api -> media : 写入图片文件
+api -> db : 创建 pending PostImage
+api --> frontend : image_id、URL 与尺寸
+frontend -> api : POST /api/v1/posts\n(image_ids)
+api -> db : 创建 Post\n按顺序绑定图片为 attached
+api --> frontend : PostResponse
+
+alt 删除已发布 Post
+  frontend -> api : DELETE /api/v1/posts/{post_id}
+  api -> db : 删除 Post 与图片记录
+  api -> media : 删除物理文件
+else 清理未绑定或删除失败的图片
+  api -> db : 查询过期 pending / cleanup_pending
+  api -> media : 删除物理文件
+  api -> db : 删除已清理记录
+end
+
+@enduml

@@ -79,12 +79,11 @@ Owner 详情页复用现有 `/owner/qas/[qaId]` 页面，因此提交后会继�
 | TypeScript 类型检查 | `npm run typecheck` |      Pass       |
 | 前端 Lint | `npm run lint` |      Pass       |
 | 生产构建 | `npm run build`，包含 `/owner/qas/new` |      Pass       |
-| 浏览器端到端 | Owner 提问到回答的完整 Playwright 流程 |      Pass       |
+| 浏览器端到端 | Owner 提问到回答的完整 Playwright 流程 | Pass（2026-08-15，Playwright 2 项完整回归） |
 
 ## 6. 遗留风险与后续事项（Risks & Follow-ups）
 
 | 风险 / 遗留事项 | 当前处理 | 后续方向 |
 | --- | --- | --- |
-| 浏览器端真实工作流尚未验证 | Vitest、类型检查、Lint 和生产构建均已通过 | 启动本地前后端及测试账号后执行 Owner 提问、查看详情和回答的 Playwright 流程 |
 | Family 与 Owner 使用不同提问入口 | 通过独立页面和配置化表单明确区分 | 若未来需要跨区域切换，再单独设计统一的区域切换交互 |
 

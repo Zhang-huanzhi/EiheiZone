@@ -4,7 +4,7 @@
 
 EiheiZone 是一个私密的家庭信息门户，用于分享生活近况、回答家人问题和记录重大支出。它在一个响应式 Web 应用中，同时提供公开内容、仅家人可见区域和 Owner 管理区。
 
-**V1 状态：** 已于 2026 年 8 月 5 日发布并通过验收，适用于家庭小范围使用。
+**当前版本：** v1.1.0，已于 2026 年 8 月 15 日通过发布验收；对应 Git tag 在发布提交合并且生产验证成功后创建。
 
 **生产站点：** [https://eihei.zone](https://eihei.zone)
 
@@ -12,17 +12,18 @@ EiheiZone 是一个私密的家庭信息门户，用于分享生活近况、回�
   <img src="frontend/public/screenshots/login-mobile.png" alt="EiheiZone 移动端登录页面" width="280">
 </p>
 
-> V1 应用界面使用简体中文。上方的英语、中文和日语只表示 README 文档翻译，不表示应用已经实现多语言。
+> 应用界面使用简体中文。上方的英语、中文和日语只表示 README 文档翻译，不表示应用已经实现多语言。
 
 ## 功能
 
 - **基于角色的访问控制：** Public、Family、Owner 使用不同区域，权限由后端强制执行。
-- **Post 近况：** Owner 管理生活近况，并可选择 `public` 或 `family` 可见范围。
-- **家庭问答：** Family 和 Owner 均可提问，由 Owner 回答。
+- **Post 近况：** Family 和 Owner 均可发布文字或图文近况，并选择 `public` 或 `family` 可见范围；Owner 管理全部 Post。
+- **Post 图片：** 每条 Post 最多 9 张经后端鉴权的图片，统一处理为 WebP 并保存在持久媒体卷中。
+- **家庭问答：** Family 和 Owner 在各自区域提问，由 Owner 回答，列表同时显示回答时间。
 - **重大支出：** 仅家庭成员可见，金额使用精确十进制，币种使用 ISO 4217 代码。
 - **Dashboard：** 聚合近期 Post、QA 和 Expenditure，不建立独立 Dashboard 数据表。
 - **可安装体验：** 响应式页面、PWA Manifest 和生产 HTTPS 部署。
-- **运维工具：** Alembic Migration、账号维护脚本、健康检查和自动化测试。
+- **运维工具：** Alembic Migration、账号和媒体维护脚本、CI 必需检查、SSH 自动部署、健康检查和基于 commit 的回滚。
 
 ## 角色与权限
 
@@ -30,13 +31,14 @@ EiheiZone 是一个私密的家庭信息门户，用于分享生活近况、回�
 | --- | :---: | :---: | :---: |
 | 查看公开 Post | 可以 | 可以 | 可以 |
 | 查看仅家人可见 Post | 不可以 | 可以 | 可以 |
+| 发布文字或图文 Post | 不可以 | 可以 | 可以 |
 | 提交和查看家庭问题 | 不可以 | 可以 | 可以 |
 | 查看重大支出 | 不可以 | 可以 | 可以 |
 | 查看家庭 Dashboard | 不可以 | 可以 | 可以 |
-| 管理 Post 和支出 | 不可以 | 不可以 | 可以 |
+| 管理全部 Post 和支出 | 不可以 | 不可以 | 可以 |
 | 回答问题和使用 Owner Workspace | 不可以 | 不可以 | 可以 |
 
-V1 不提供公开注册或用户管理页面。可信运维人员通过后端脚本创建账号和重置密码。
+应用不提供公开注册或用户管理页面。可信运维人员通过后端脚本创建账号和重置密码。
 
 ## 架构
 
@@ -67,6 +69,7 @@ Caddy（HTTPS 与反向代理）
 
 ```text
 eiheizone/
+|-- .github/workflows/   # CI 与生产部署 Workflow
 |-- backend/
 |   |-- alembic/          # 数据库 Migration
 |   |-- app/
@@ -84,7 +87,7 @@ eiheizone/
 `-- deploy.env.example
 ```
 
-正式项目文档：[`docs/README.md`](docs/README.md)。V1 历史交付位于 [`docs/versions/v1/`](docs/versions/v1/)，后续变更记录在 [`docs/iterations/`](docs/iterations/)。
+正式项目文档：[`docs/README.md`](docs/README.md)。历史版本归档位于 [`docs/versions/`](docs/versions/)，其中包括 [`v1.1.0`](docs/versions/v1.1/)；活动变更记录在 [`docs/iterations/`](docs/iterations/)。
 
 ## 本地配置
 
@@ -200,21 +203,15 @@ E2E 脚本只使用 `eiheizone_test`，创建虚构账号，并临时使用 `310
 
 ## 生产部署
 
-仓库中的 Compose 配置在单机上运行 PostgreSQL 17、FastAPI、Next.js 和 Caddy。`Caddyfile` 与 `docker-compose.yml` 当前按 `eihei.zone` 配置。
+生产环境在单台 Docker Compose 主机上运行 PostgreSQL 17、FastAPI、Next.js 和 Caddy。Pull Request 必须通过 Backend、Frontend 和 Deployment artifacts 检查；`main` CI 成功后，GitHub Actions 使用固定 SSH host key 调用 `/opt/eiheizone/deploy.sh`。脚本只允许 fast-forward 更新，使用完整 commit SHA 标记镜像，等待 Compose 就绪并检查公网健康接口。
 
-```powershell
-Copy-Item deploy.env.example .env
-# 启动前替换所有占位值，并检查域名配置。
-docker compose up -d --build
-docker compose ps
-```
+生产 `.env`、部署状态、数据库与媒体卷保存在服务器且不进入 Git。`rollback.sh` 可以恢复上一稳定 commit，但不会删除 volumes 或逆向执行 Alembic Migration。初始化、回滚、图片清理、备份和恢复边界见 [`docs/operations.md`](docs/operations.md)。
 
-FastAPI 启动前会执行 `alembic upgrade head`。只有 Caddy 暴露宿主机端口，应用与数据库位于 Compose 内部网络。生产 `.env`、数据库备份、SSH 私钥和 Android 签名材料不得进入 Git。
-
-## V1 边界与已知风险
+## v1.1 边界与已知风险
 
 - 应用界面仅有中文，且必须联网使用；不会离线缓存家庭真实数据。
-- V1 不包括注册、邀请、自助找回密码、文件上传、评论、即时聊天、通知、搜索、AI 和完整记账报表。
-- 生产数据保存在 Docker named volume。异机加密备份和恢复演练已暂缓，因此主机损坏可能导致永久数据丢失。
-- V1 发布时接受了已知的生产依赖审计告警。扩大部署范围前应重新执行依赖审计和完整回归。
+- 应用不包括注册、邀请、自助找回密码、Post 图片以外的通用附件、评论、即时聊天、通知、搜索、AI 和完整记账报表。
+- 已发布 Post 暂不支持增删或重排图片，孤立图片清理仍需人工执行维护脚本。
+- PostgreSQL 和 Post 图片保存在 Docker named volume。异机加密备份和恢复演练已暂缓，因此主机损坏可能导致永久数据丢失。
+- 扩大部署范围前应重新执行依赖审计和完整回归。
 - 本仓库不包含生产秘密、真实家庭数据、Android 签名密钥或可分发 Android 安装包。
