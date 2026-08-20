@@ -25,6 +25,7 @@ V1 之后，一次功能或一组相关变更默认使用一份迭代文档，�
 ## 当前活动迭代
 
 - [V1.2 / 001 性能基线](v1.2/001_performance-baseline.md)
+- [V1.2 / 002 公网访问问题诊断](v1.2/002_performance-diagnosis.md)
 
 数据库结构变化必须在代码中新增 Alembic Migration，并在这里记录 Migration 验证结果。重要的跨模块架构决策另建 `../adr/` 文档，并从本迭代链接。 
 
