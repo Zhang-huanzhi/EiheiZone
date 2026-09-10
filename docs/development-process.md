@@ -26,7 +26,7 @@
 4. 推送分支并创建 Pull Request，说明行为变化、Migration/配置影响、测试结果和遗留风险。
 5. `Backend`、`Frontend`、`Deployment artifacts` required checks 全部成功且分支与 `main` 同步后才可合并。
 
-GitHub Actions 对 Pull Request 和 `main` push 运行 CI。`main` 应始终保持可运行、可迁移和可发布；测试失败、文档证据矛盾或尚未验证的发布条件不得写成 Pass。
+GitHub Actions 对所有 Pull Request 运行 CI；合并到 `main` 后，只有变更包含 `docs/**` 之外的路径才再次运行 CI 并进入自动部署链路。纯 `docs/**` 变更仍须在 Pull Request 阶段通过现有 required checks，但合并后不部署生产环境。`main` 应始终保持可运行、可迁移和可发布；测试失败、文档证据矛盾或尚未验证的发布条件不得写成 Pass。
 
 ## 3. 版本归档
 

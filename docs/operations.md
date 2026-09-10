@@ -19,7 +19,7 @@
 
 ## 2. CI 与自动部署
 
-Pull Request 和 `main` push 会运行 CI：
+所有 Pull Request 都会运行 CI。`main` push 仅在变更包含 `docs/**` 之外的路径时运行 CI；纯 `docs/**` 变更合并后跳过 CI，也不会触发后续生产部署：
 
 | Job | 检查 |
 | --- | --- |
@@ -27,7 +27,7 @@ Pull Request 和 `main` push 会运行 CI：
 | Frontend | 锁定依赖、ESLint、Vitest、TypeScript、Next.js production build |
 | Deployment artifacts | Bash 语法、Compose 配置、前后端生产镜像构建 |
 
-`main` push 的 CI 成功后，Deploy workflow 进入 `production` Environment，通过固定 host key 的 SSH 连接调用：
+需要运行 CI 的 `main` push 在 CI 成功后，由 Deploy workflow 进入 `production` Environment，通过固定 host key 的 SSH 连接调用：
 
 ```bash
 bash /opt/eiheizone/deploy.sh
