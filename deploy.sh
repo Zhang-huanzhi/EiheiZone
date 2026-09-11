@@ -7,6 +7,7 @@ readonly PROJECT_DIR="/opt/eiheizone"
 readonly STATE_DIR="${PROJECT_DIR}/.deploy"
 readonly TARGET_BRANCH="main"
 readonly HEALTHCHECK_URL="https://eihei.zone/api/v1/health"
+readonly HEALTHCHECK_RESOLVE="eihei.zone:443:127.0.0.1"
 
 previous_stable=""
 target_commit=""
@@ -88,7 +89,9 @@ docker compose up -d --no-build --remove-orphans --wait --wait-timeout 180
 log "Checking ${HEALTHCHECK_URL}."
 health_ok=false
 for attempt in {1..12}; do
-  if curl --fail --silent --show-error --max-time 10 "${HEALTHCHECK_URL}" >/dev/null; then
+  if curl --fail --silent --show-error --max-time 10 \
+    --resolve "${HEALTHCHECK_RESOLVE}" \
+    "${HEALTHCHECK_URL}" >/dev/null; then
     health_ok=true
     break
   fi

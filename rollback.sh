@@ -7,6 +7,7 @@ readonly PROJECT_DIR="/opt/eiheizone"
 readonly STATE_DIR="${PROJECT_DIR}/.deploy"
 readonly TARGET_BRANCH="main"
 readonly HEALTHCHECK_URL="https://eihei.zone/api/v1/health"
+readonly HEALTHCHECK_RESOLVE="eihei.zone:443:127.0.0.1"
 
 log() {
   printf '[%s] %s\n' "$(date --iso-8601=seconds)" "$*"
@@ -15,7 +16,9 @@ log() {
 health_check() {
   local attempt
   for attempt in {1..12}; do
-    if curl --fail --silent --show-error --max-time 10 "${HEALTHCHECK_URL}" >/dev/null; then
+    if curl --fail --silent --show-error --max-time 10 \
+      --resolve "${HEALTHCHECK_RESOLVE}" \
+      "${HEALTHCHECK_URL}" >/dev/null; then
       return 0
     fi
     log "Health check attempt ${attempt}/12 failed."
