@@ -11,6 +11,7 @@
 | `operations.md` | 当前 CI/CD、部署、Migration、备份和恢复基线 | 持续更新 |
 | `versions/v1/` | `v1.0.0` 的完整历史交付材料 | Frozen |
 | `versions/v1.1/` | `v1.1.0` 的五次迭代、发布摘要和验证记录 | Frozen |
+| `versions/v1.2/` | `v1.2` 的三次性能、网络和部署流程迭代 | Frozen / Accepted |
 | `iterations/` | 尚未归档版本的活动迭代记录与模板 | 随迭代更新 |
 | `adr/` | 影响多个模块或未来演进的架构决策 | 按需新增 |
 
@@ -24,6 +25,7 @@
 - 了解部署、回滚和数据边界：阅读 [`operations.md`](operations.md)；
 - 审阅 `v1.0.0`：阅读 [`versions/v1/README.md`](versions/v1/README.md)；
 - 审阅 `v1.1.0`：阅读 [`versions/v1.1/README.md`](versions/v1.1/README.md)；
+- 审阅 `v1.2`：阅读 [`versions/v1.2/README.md`](versions/v1.2/README.md)；
 - 了解正在进行的后续工作：阅读 [`iterations/README.md`](iterations/README.md) 和对应活动版本目录。
 
 ## 公开边界

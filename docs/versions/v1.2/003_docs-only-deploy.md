@@ -3,7 +3,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 目标版本 | v1.2 |
-| 状态 | In Progress |
+| 状态 | Accepted |
 | 分支 | `fix/v1.2-003-docs-only-deploy` |
 
 ## 1. 目标

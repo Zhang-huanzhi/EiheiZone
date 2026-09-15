@@ -37,7 +37,7 @@ export function PostImages({ images = [], interactive = true }: PostImagesProps)
 function PostImage({ image }: { image: PostImageRecord }) {
   // Images are already resized WebP files and require credentialed same-origin requests.
   // eslint-disable-next-line @next/next/no-img-element
-  return <img alt="" className="h-full w-full object-cover" loading="lazy" src={image.url} />;
+  return <img alt="" className="h-full w-full object-contain" loading="lazy" src={image.url} />;
 }
 
 function ImageViewer({
