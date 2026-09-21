@@ -1,5 +1,5 @@
-import { LoadingState } from "@/components/feedback/loading-state";
+import { PageLoadingSkeleton } from "@/components/feedback/page-loading-skeleton";
 
 export default function PublicLoading() {
-  return <LoadingState message="正在加载公开区域..." />;
+  return <PageLoadingSkeleton variant="public" />;
 }
