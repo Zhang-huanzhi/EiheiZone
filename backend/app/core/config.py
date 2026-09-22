@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     app_name: str = "EiheiZone API"
     app_env: Literal["development", "test", "production"] = "development"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
+    slow_request_threshold_ms: int = 300
     app_timezone: str = "Asia/Shanghai"
     database_url: str
     test_database_url: str | None = None
@@ -92,6 +93,14 @@ class Settings(BaseSettings):
     def validate_csrf_token_ttl_seconds(cls, value: int) -> int:
         if value <= 0:
             message = "CSRF_TOKEN_TTL_SECONDS must be greater than zero"
+            raise ValueError(message)
+        return value
+
+    @field_validator("slow_request_threshold_ms")
+    @classmethod
+    def validate_slow_request_threshold_ms(cls, value: int) -> int:
+        if value <= 0:
+            message = "SLOW_REQUEST_THRESHOLD_MS must be greater than zero"
             raise ValueError(message)
         return value
 

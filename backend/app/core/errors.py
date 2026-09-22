@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.request_metrics import ExceptionCategory
 from app.core.request_id import REQUEST_ID_HEADER
 
 
@@ -78,6 +79,12 @@ def get_request_id(request: Request) -> str:
     return str(uuid4())
 
 
+def set_exception_category(request: Request, category: ExceptionCategory) -> None:
+    """Expose the handled exception category to the request middleware."""
+
+    request.state.exception_category = category.value
+
+
 def error_response(
     request: Request,
     *,
@@ -107,6 +114,7 @@ def error_response(
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     """Convert expected application errors into the shared API error shape."""
 
+    set_exception_category(request, ExceptionCategory.APP)
     return error_response(
         request,
         status_code=exc.status_code,
@@ -122,6 +130,7 @@ async def request_validation_error_handler(
 ) -> JSONResponse:
     """Convert FastAPI query, path, and body validation errors into field errors."""
 
+    set_exception_category(request, ExceptionCategory.VALIDATION)
     field_errors = [
         FieldError(
             field=".".join(str(part) for part in error["loc"]),
@@ -145,6 +154,7 @@ async def http_exception_handler(
 ) -> JSONResponse:
     """Convert framework HTTP errors, including missing routes, into API errors."""
 
+    set_exception_category(request, ExceptionCategory.HTTP)
     return error_response(
         request,
         status_code=exc.status_code,
@@ -156,6 +166,7 @@ async def http_exception_handler(
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Return a safe response for unexpected failures; middleware logs the exception."""
 
+    set_exception_category(request, ExceptionCategory.UNHANDLED)
     return error_response(
         request,
         status_code=500,
