@@ -21,6 +21,7 @@ def test_development_auth_defaults_are_local_safe() -> None:
     settings = make_settings()
 
     assert settings.app_origin == "http://localhost:3000"
+    assert settings.slow_request_threshold_ms == 300
     assert settings.cookie_secure is False
     assert settings.session_ttl_days == 30
     assert settings.session_cookie_name == "pfp_session"
@@ -92,6 +93,17 @@ def test_production_accepts_secure_cookie_https_origin_and_csrf_secret() -> None
     )
 
     assert settings.app_env == "production"
+
+
+def test_slow_request_threshold_can_be_overridden() -> None:
+    settings = make_settings(slow_request_threshold_ms=450)
+
+    assert settings.slow_request_threshold_ms == 450
+
+
+def test_slow_request_threshold_must_be_positive() -> None:
+    with pytest.raises(ValidationError, match="SLOW_REQUEST_THRESHOLD_MS"):
+        make_settings(slow_request_threshold_ms=0)
 
 
 @pytest.mark.parametrize(
