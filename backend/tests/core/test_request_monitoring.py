@@ -35,13 +35,16 @@ def request_log_records() -> list[logging.LogRecord]:
     handler = ListHandler()
     logger = request_id_module.logger
     previous_level = logger.level
+    previous_disabled = logger.disabled
     logger.setLevel(logging.INFO)
+    logger.disabled = False
     logger.addHandler(handler)
     try:
         yield handler.records
     finally:
         logger.removeHandler(handler)
         logger.setLevel(previous_level)
+        logger.disabled = previous_disabled
 
 
 def create_monitoring_app() -> FastAPI:

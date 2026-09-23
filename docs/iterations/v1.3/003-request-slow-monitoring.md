@@ -3,7 +3,8 @@
 | 项目 | 内容 |
 | --- | --- |
 | 目标版本 | `v1.3` |
-| 状态 | In Progress |
+| 状态 | Accepted |
+| 实现日期 | `2026-09-23` |
 | 分支 | `feat/v1.3-003-request-slow-monitoring` |
 
 ## 1. 目标
@@ -62,10 +63,10 @@ SQLAlchemy 的 `before_cursor_execute`、`after_cursor_execute` 和 `handle_erro
 | 检查 | 结果 | 证据 |
 | --- | --- | --- |
 | 配置、请求中间件、异常分类和 SQL 聚合 | 已实现 | `backend/app/core/request_metrics.py`、`backend/app/core/request_id.py`、`backend/app/db/session.py` |
-| 请求日志和异常分类测试 | 待验证 | `backend/tests/core/test_request_monitoring.py` |
-| SQL 聚合测试 | 待验证 | `backend/tests/core/test_request_monitoring.py` |
-| 后端 Pytest | 待验证 | `backend/.venv/Scripts/python.exe -m pytest` |
-| Ruff | PASS（初步检查） | `backend/.venv/Scripts/ruff.exe check app tests` |
+| 请求日志和异常分类测试 | PASS | `backend/tests/core/test_request_monitoring.py`，含 auth 测试之后的顺序验证 |
+| SQL 聚合测试 | PASS | `backend/tests/core/test_request_monitoring.py`，查询聚合、上下文重置和错误查询计时通过 |
+| 后端 Pytest | PASS | 全量 244 项通过；本地运行记录为 240 passed，另 4 个系统临时目录相关用例由维护者确认通过 |
+| Ruff | PASS | `backend/.venv/Scripts/ruff.exe check .`，结果 `All checks passed!`；有缓存目录访问警告 |
 
 ## 8. 发布记录
 
