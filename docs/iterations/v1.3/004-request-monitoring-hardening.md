@@ -22,6 +22,7 @@ GitHub Copilot 通过邮件反馈发现请求监控存在高风险的敏感数�
 - 保留 `request_id` 和结构化 `exception_category` 作为排查入口；
 - 提取 SQLAlchemy 查询计时事件注册函数，使测试 Engine 复用生产 Engine 的监听器；
 - 增加专用 PostgreSQL 数据库上的成功查询、失败查询和请求隔离回归测试；
+- 让迁移测试复用统一校验和连通性检查的 `test_engine`，避免绕过专用测试库保护；
 - 更新迭代索引并新增本迭代记录。
 
 ## 3. 不做事项
@@ -44,7 +45,7 @@ SQLAlchemy 监听器由 `register_query_monitoring(engine)` 统一注册到生�
 | --- | --- |
 | 未处理异常日志 | 固定脱敏消息，不再包含 traceback 或异常详情 |
 | 数据库观测 | 生产与测试 Engine 使用同一套查询计时监听器 |
-| 测试环境 | 数据库测试仅接受名为 `eiheizone_test` 的 PostgreSQL URL |
+| 测试环境 | 数据库测试和迁移测试仅接受名为 `eiheizone_test` 的 PostgreSQL URL |
 | API、数据库结构 | 无契约和 Migration 变化 |
 
 ## 6. 验收标准
@@ -65,6 +66,7 @@ SQLAlchemy 监听器由 `register_query_monitoring(engine)` 统一注册到生�
 | SQLAlchemy 监听器复用 | 已实现 | `backend/app/db/session.py` 的 `register_query_monitoring`；测试 fixture 同样注册 |
 | 聚焦监控测试 | PASS | `backend/tests/core/test_request_monitoring.py`，13 passed |
 | PostgreSQL 集成覆盖 | PASS | 成功查询、失败查询及请求隔离测试均使用 `TEST_DATABASE_URL` 指向的 `eiheizone_test` |
+| 迁移测试数据库保护 | PASS | 4 个迁移测试统一使用已校验并已连通的 `test_engine`，4 passed |
 | 后端全量 Pytest | 部分通过 | `243 passed`；4 个既有图片上传用例在 `tmp_path` fixture setup 阶段因运行环境拒绝扫描临时目录而报错，与本次改动无关 |
 | Ruff | PASS | `backend/.venv/Scripts/ruff.exe check .`，`All checks passed!`；有缓存目录访问警告 |
 
