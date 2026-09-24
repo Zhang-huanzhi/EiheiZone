@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Connection, Engine, make_url
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 os.environ.setdefault(
@@ -13,7 +14,7 @@ os.environ.setdefault(
 )
 
 from app.core.config import get_settings
-from app.db.session import get_db
+from app.db.session import get_db, register_query_monitoring
 from app.main import app
 
 
@@ -25,11 +26,16 @@ def get_test_database_url() -> str:
 
     database_url = get_settings().test_database_url
     if database_url is None:
-        raise RuntimeError("TEST_DATABASE_URL is required to run database tests")
+        pytest.skip("环境阻塞：TEST_DATABASE_URL 未配置")
 
-    if make_url(database_url).database != TEST_DATABASE_NAME:
+    try:
+        database_name = make_url(database_url).database
+    except ValueError:
+        pytest.skip("环境阻塞：TEST_DATABASE_URL 不是有效数据库 URL")
+
+    if database_name != TEST_DATABASE_NAME:
         message = f"Database tests must target {TEST_DATABASE_NAME}"
-        raise RuntimeError(message)
+        pytest.skip(f"环境阻塞：{message}")
 
     return database_url
 
@@ -37,6 +43,16 @@ def get_test_database_url() -> str:
 @pytest.fixture
 def test_engine() -> Generator[Engine]:
     engine = create_engine(get_test_database_url(), pool_pre_ping=True)
+    register_query_monitoring(engine)
+    try:
+        with engine.connect():
+            pass
+    except SQLAlchemyError as error:
+        engine.dispose()
+        pytest.skip(
+            "环境阻塞：专用 PostgreSQL 测试数据库不可用 "
+            f"({type(error).__name__})"
+        )
     try:
         yield engine
     finally:
