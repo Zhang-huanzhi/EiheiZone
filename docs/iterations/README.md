@@ -11,6 +11,8 @@ V1 之后，一次功能或一组相关变更默认使用一份迭代文档，�
 | 状态 | Proposed / In Progress / Released |
 | 分支 | feat/example |
 
+## 前言
+
 ## 1. 目标
 ## 2. 本次范围
 ## 3. 不做事项
@@ -18,14 +20,15 @@ V1 之后，一次功能或一组相关变更默认使用一份迭代文档，�
 ## 5. 影响范围
 ## 6. 验收标准
 ## 7. 实现与测试记录
-## 8. 发布记录
-## 9. 遗留风险
+## 8. 遗留风险
 ```
 
-## 当前活动迭代
+## 迭代文档索引
 
 - [V1.3 / 001 修复 Post 图片预览裁剪](v1.3/001-post-image-preview.md)
+- [V1.3 / 002 结构化加载反馈与骨架屏](v1.3/002-structured-loading-feedback.md)
 - [V1.3 / 003 完善请求级慢请求监控](v1.3/003-request-slow-monitoring.md)
+- [V1.3 / 004 请求监控安全加固](v1.3/004-request-monitoring-hardening.md)
 
 数据库结构变化必须在代码中新增 Alembic Migration，并在这里记录 Migration 验证结果。重要的跨模块架构决策另建 `../adr/` 文档，并从本迭代链接。 
 
