@@ -49,7 +49,13 @@ async def request_id_middleware(
         raise
     except Exception:
         request.state.exception_category = ExceptionCategory.UNHANDLED.value
-        logger.exception("Unhandled request error", extra={"request_id": request_id})
+        logger.error(
+            "Unhandled request error",
+            extra={
+                "request_id": request_id,
+                "exception_category": ExceptionCategory.UNHANDLED.value,
+            },
+        )
         raise
     finally:
         duration_ms = round((perf_counter() - started_at) * 1000, 2)

@@ -4,10 +4,14 @@ from types import SimpleNamespace
 from uuid import UUID
 
 import pytest
-from fastapi import FastAPI, Query, Request
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.responses import Response
 from fastapi.testclient import TestClient
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core import request_id as request_id_module
 from app.core.errors import AppError, register_exception_handlers
@@ -78,7 +82,19 @@ def create_monitoring_app() -> FastAPI:
 
     @app.get("/unhandled")
     def unhandled() -> None:
-        raise RuntimeError("internal failure")
+        raise RuntimeError(
+            "internal failure: SQL SELECT secret WHERE id=:id "
+            "bound_param=family-secret business_data=private"
+        )
+
+    @app.get("/db-success")
+    def db_success(session: Session = Depends(db_session.get_db)) -> dict[str, int]:
+        value = session.execute(text("SELECT 1")).scalar_one()
+        return {"value": value}
+
+    @app.get("/db-failure")
+    def db_failure(session: Session = Depends(db_session.get_db)) -> None:
+        session.execute(text("SELECT 1 / 0"))
 
     return app
 
@@ -183,7 +199,26 @@ def test_unhandled_error_is_classified_without_exposing_details(
         response = client.get("/unhandled")
 
     assert response.status_code == 500
-    assert "internal failure" not in response.text
+    for sensitive_value in (
+        "internal failure",
+        "SELECT secret",
+        "bound_param=family-secret",
+        "private",
+    ):
+        assert sensitive_value not in response.text
+
+    error = get_log_record(request_log_records, "Unhandled request error")
+    assert error.exc_info is None
+    assert error.exc_text is None
+    assert error.exception_category == ExceptionCategory.UNHANDLED.value
+    for sensitive_value in (
+        "internal failure",
+        "SELECT secret",
+        "bound_param=family-secret",
+        "private",
+    ):
+        assert sensitive_value not in error.getMessage()
+
     slow = get_log_record(request_log_records, "Slow request")
     assert slow.status_code == 500
     assert slow.exception_category == ExceptionCategory.UNHANDLED.value
@@ -275,3 +310,90 @@ def test_database_error_callback_finishes_query(monkeypatch: pytest.MonkeyPatch)
 
     assert metrics.query_count == 1
     assert metrics.db_duration_ms == 125.0
+
+
+def test_postgresql_success_query_is_counted_and_timed(test_engine: Engine) -> None:
+    metrics = RequestMetrics()
+    token = set_request_metrics(metrics)
+    try:
+        with test_engine.connect() as connection:
+            assert connection.execute(text("SELECT 1")).scalar_one() == 1
+    finally:
+        reset_request_metrics(token)
+
+    assert metrics.query_count == 1
+    assert metrics.db_duration_ms >= 0
+    assert metrics._started_queries == {}
+
+
+def test_postgresql_failed_query_is_timed_without_open_context(
+    test_engine: Engine,
+) -> None:
+    metrics = RequestMetrics()
+    token = set_request_metrics(metrics)
+    try:
+        with test_engine.connect() as connection:
+            with pytest.raises(SQLAlchemyError):
+                connection.execute(text("SELECT 1 / 0"))
+    finally:
+        reset_request_metrics(token)
+
+    assert metrics.query_count == 1
+    assert metrics.db_duration_ms >= 0
+    assert metrics._started_queries == {}
+
+
+def test_postgresql_request_metrics_are_isolated_in_slow_logs(
+    test_engine: Engine,
+    request_log_records: list[logging.LogRecord],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(request_id_module, "get_slow_request_threshold_ms", lambda: 1)
+    app = create_monitoring_app()
+
+    def override_get_db():
+        connection = test_engine.connect()
+        transaction = connection.begin()
+        session = sessionmaker(
+            bind=connection,
+            autoflush=False,
+            expire_on_commit=False,
+        )()
+        try:
+            yield session
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+            if transaction.is_active:
+                transaction.rollback()
+            connection.close()
+
+    app.dependency_overrides[db_session.get_db] = override_get_db
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            success = client.get("/db-success")
+            failure = client.get("/db-failure")
+    finally:
+        app.dependency_overrides.pop(db_session.get_db, None)
+
+    assert success.status_code == 200
+    assert failure.status_code == 500
+    slow_records = [
+        record
+        for record in request_log_records
+        if record.getMessage() == "Slow request"
+    ]
+    assert len(slow_records) == 2
+    by_request_id = {record.request_id: record for record in slow_records}
+    assert by_request_id[success.headers["X-Request-ID"]].db_query_count == 1
+    assert by_request_id[failure.headers["X-Request-ID"]].db_query_count == 1
+    assert (
+        by_request_id[success.headers["X-Request-ID"]].exception_category
+        == ExceptionCategory.NONE.value
+    )
+    assert (
+        by_request_id[failure.headers["X-Request-ID"]].exception_category
+        == ExceptionCategory.UNHANDLED.value
+    )
