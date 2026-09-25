@@ -3,7 +3,8 @@
 | 项目 | 内容 |
 | --- | --- |
 | 目标版本 | `v1.3` |
-| 状态 | In Progress |
+| 状态 | Accepted |
+| 实现日期 | `2026-09-25` |
 | 分支 | `feat/v1.3-005-http3-performance-test` |
 
 ## 前言
@@ -79,11 +80,12 @@ ports:
 | Caddy UDP `443` 映射 | 已实现 | `docker-compose.yml` Caddy `ports` |
 | 迭代索引 | 已实现 | `docs/iterations/README.md` |
 | Compose YAML 结构解析 | PASS | PyYAML 解析通过；当前环境未安装 Docker CLI，`docker compose config --quiet` 待在 Docker 环境补跑 |
-| 腾讯云防火墙 UDP `443` | 待发布前验证 | 维护者在腾讯云控制台记录规则 |
-| 宿主机 UDP 监听与容器映射 | 待部署后验证 | `ss -lunp`、`docker compose ps`、`docker inspect` |
-| 浏览器 HTTP/3 协商 | 待部署后验证 | 浏览器 Network `Protocol` |
+| 腾讯云防火墙 UDP `443` | PASS | 腾讯云安全组已放行入站 UDP `443` |
+| 宿主机 UDP 监听与容器映射 | PASS | 宿主机 `ss -lunp`、Caddy `docker inspect` 和 `docker compose ps` 均确认 UDP `443` |
+| Caddy HTTP/3 宣告 | PASS | Caddy 日志显示 `h1`、`h2`、`h3`；响应头包含 `alt-svc: h3=":443"` |
+| 浏览器 HTTP/3 协商 | 部分验证 | 浏览器曾观察到 `h3`，但多数请求仍回退为 `h2`，协商受客户端网络条件影响 |
 | 页面长尾对比 | 待部署后验证 | 同客户端、同路径、每路径至少 20 次 |
-| CI 检查 | 待 PR 验证 | Backend、Frontend、Deployment artifacts |
+| CI 检查 | PASS | PR required checks 通过 |
 
 ## 8. 发布与回滚
 
@@ -98,3 +100,9 @@ ports:
 - 单次采样结果会受大陆出口、时间段和运营商路由影响；
 - 即使 HTTP/3 协商成功，也需要端到端数据证明页面长尾实际改善；
 - 云防火墙规则、生产部署和真实浏览器验收必须由维护者在服务器环境完成。
+
+## 10. 验收结论
+
+本迭代的部署目标已完成：生产 Caddy 已公开 UDP `443`，能够宣告并接受 HTTP/3，HTTP/2 仍可正常回退。浏览器已经出现过 `h3` 请求，证明 HTTP/3 路径可用。
+
+当前不能据此断言 RTT 降低或页面长尾已经改善。HTTP/3 主要可能缓解丢包场景下 TCP 队头阻塞对页面请求的放大，实际收益仍受浏览器连接复用、代理/VPN 和运营商网络路径影响。后续应在固定网络条件下补做简化的 RTT、协议比例和页面长尾对比，并将结果补回本文件。
