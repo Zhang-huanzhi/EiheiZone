@@ -29,6 +29,7 @@ V1 之后，一次功能或一组相关变更默认使用一份迭代文档，�
 - [V1.3 / 002 结构化加载反馈与骨架屏](v1.3/002-structured-loading-feedback.md)
 - [V1.3 / 003 完善请求级慢请求监控](v1.3/003-request-slow-monitoring.md)
 - [V1.3 / 004 请求监控安全加固](v1.3/004-request-monitoring-hardening.md)
+- [V1.3 / 005 HTTP/3 访问性能验证](v1.3/005-http3-performance-test.md)
 
 数据库结构变化必须在代码中新增 Alembic Migration，并在这里记录 Migration 验证结果。重要的跨模块架构决策另建 `../adr/` 文档，并从本迭代链接。 
 
