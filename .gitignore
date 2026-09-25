@@ -5,6 +5,9 @@
 # Local agent instructions
 /AGENTS.md
 
+# Local server connection notes (never commit host credentials or private keys)
+.codex/server-login.local.md
+
 # Python
 backend/.venv/
 **/__pycache__/
