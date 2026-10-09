@@ -1,9 +1,9 @@
 # 当前开发流程
 
-| 适用产品版本 | Current / v1.3.x |
+| 适用产品版本 | Current / v1.4.x |
 | --- | --- |
 | 文档状态 | Active |
-| 最后更新 | 2026-08-15 |
+| 最后更新 | 2026-10-09 |
 
 本文档描述 V1 之后的轻量迭代与发布流程。V1 当时采用的六阶段流程保存在 [`versions/v1/00b_v1_development_process.md`](versions/v1/00b_v1_development_process.md)，不作为后续迭代的强制模板。
 

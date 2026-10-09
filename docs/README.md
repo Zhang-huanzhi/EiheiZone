@@ -12,6 +12,8 @@
 | `versions/v1/` | `v1.0.0` 的完整历史交付材料 | Frozen |
 | `versions/v1.1/` | `v1.1.0` 的五次迭代、发布摘要和验证记录 | Frozen |
 | `versions/v1.2/` | `v1.2` 的三次性能、网络和部署流程迭代 | Frozen / Accepted |
+| `versions/v1.3/` | `v1.3` 的五次图片、加载、监控和 HTTP/3 迭代 | Frozen / Accepted |
+| `iterations/v1.4/` | 当前 v1.4 活动迭代入口 | In Progress |
 | `iterations/` | 尚未归档版本的活动迭代记录与模板 | 随迭代更新 |
 | `adr/` | 影响多个模块或未来演进的架构决策 | 按需新增 |
 
@@ -26,7 +28,9 @@
 - 审阅 `v1.0.0`：阅读 [`versions/v1/README.md`](versions/v1/README.md)；
 - 审阅 `v1.1.0`：阅读 [`versions/v1.1/README.md`](versions/v1.1/README.md)；
 - 审阅 `v1.2`：阅读 [`versions/v1.2/README.md`](versions/v1.2/README.md)；
-- 了解正在进行的后续工作：阅读 [`iterations/README.md`](iterations/README.md) 和对应活动版本目录。
+- 审阅 `v1.3`：阅读 [`versions/v1.3/README.md`](versions/v1.3/README.md)；
+- 了解 v1.4 活动迭代：阅读 [`iterations/v1.4/README.md`](iterations/v1.4/README.md)；
+- 了解迭代规则：阅读 [`iterations/README.md`](iterations/README.md)。
 
 ## 公开边界
 
