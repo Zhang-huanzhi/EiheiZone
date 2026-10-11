@@ -1,7 +1,7 @@
 """QA business rules, role boundaries, state consistency, and transactions."""
 
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -17,6 +17,7 @@ from app.modules.qas.repository import (
     list_unanswered_qas,
 )
 from app.modules.qas.schemas import QACreate, QAAnswerUpsert, QAResponse
+from app.modules.notifications.service import enqueue_answer, enqueue_new_question
 
 
 def list_qas_for_user(
@@ -74,12 +75,14 @@ def create_question(db: Session, *, user: User, payload: QACreate) -> QAResponse
 
     _require_questioner(user)
     qa = QA(
+        id=uuid4(),
         asked_by=user.id,
         asker=user,
         question=payload.question,
         status=QAStatus.UNANSWERED,
     )
     add_qa(db, qa)
+    enqueue_new_question(db, qa_id=qa.id)
     _commit_and_refresh(db, qa)
     return _to_response(qa)
 
@@ -98,11 +101,14 @@ def upsert_answer(
     if qa is None:
         raise _qa_not_found()
 
+    was_answered = qa.status is QAStatus.ANSWERED
     qa.answer = payload.answer
     qa.answered_by = user.id
     qa.answerer = user
     qa.answered_at = datetime.now(UTC)
     qa.status = QAStatus.ANSWERED
+    if not was_answered:
+        enqueue_answer(db, qa_id=qa.id, asker_id=qa.asked_by)
     _commit_and_refresh(db, qa)
     return _to_response(qa)
 

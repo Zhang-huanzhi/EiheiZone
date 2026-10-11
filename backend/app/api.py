@@ -10,6 +10,7 @@ from app.modules.posts.router import public_router as public_posts_router
 from app.modules.posts.router import router as posts_router
 from app.modules.posts.image_router import media_router, router as uploads_router
 from app.modules.qas.router import router as qas_router
+from app.modules.notifications.router import router as notifications_router, wechat_router
 
 
 router = APIRouter()
@@ -21,6 +22,8 @@ router.include_router(media_router)
 router.include_router(qas_router)
 router.include_router(expenditures_router)
 router.include_router(dashboard_router)
+router.include_router(notifications_router)
+router.include_router(wechat_router)
 
 
 @router.get("/health")

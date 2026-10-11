@@ -1,6 +1,6 @@
 """Post business rules, visibility boundaries, and transactions."""
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -19,6 +19,7 @@ from app.modules.posts.repository import (
     list_visible_posts,
 )
 from app.modules.posts.schemas import PostCreate, PostResponse, PostUpdate
+from app.modules.notifications.service import enqueue_new_post
 
 
 def list_public_posts_page(db: Session, pagination: PaginationParams) -> Page[PostResponse]:
@@ -65,9 +66,10 @@ def create_post(db: Session, *, user: User, payload: PostCreate) -> PostResponse
 
     _require_writer(user)
     post_data = payload.model_dump(exclude={"image_ids"})
-    post = Post(author_id=user.id, author=user, **post_data)
+    post = Post(id=uuid4(), author_id=user.id, author=user, **post_data)
     add_post(db, post)
     attach_images(db, user=user, post=post, image_ids=payload.image_ids)
+    enqueue_new_post(db, post_id=post.id)
     _commit_and_refresh(db, post)
     return _to_response(post)
 

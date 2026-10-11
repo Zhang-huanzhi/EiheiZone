@@ -41,7 +41,7 @@ export default async function OwnerLayout({ children }: OwnerLayoutProps) {
               <p className="text-sm font-medium text-muted-foreground">Owner</p>
               <h1 className="text-3xl font-semibold">管理区域</h1>
             </div>
-            <AccountMenu displayName={currentUser.display_name} roleLabel="Owner" />
+            <AccountMenu displayName={currentUser.display_name} roleLabel="Owner" notificationsPath="/owner/settings/notifications" />
           </div>
           <AreaNavigation area="owner" />
         </header>
