@@ -34,6 +34,14 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     session_ttl_days: int = 30
     csrf_token_ttl_seconds: int = 3600
+    wechat_notifications_enabled: bool = False
+    wechat_app_id: str | None = None
+    wechat_app_secret: str | None = None
+    wechat_token: str | None = None
+    wechat_template_id: str | None = None
+    wechat_message_url: str = "https://eihei.zone/family"
+    notification_worker_interval_seconds: int = 10
+    notification_max_attempts: int = 5
     # Docker resolves this to /app/media; local development uses backend/media.
     media_root: Path = BACKEND_DIRECTORY / "media"
 
@@ -94,6 +102,13 @@ class Settings(BaseSettings):
         if value <= 0:
             message = "CSRF_TOKEN_TTL_SECONDS must be greater than zero"
             raise ValueError(message)
+        return value
+
+    @field_validator("notification_worker_interval_seconds", "notification_max_attempts")
+    @classmethod
+    def validate_notification_positive(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("notification worker values must be greater than zero")
         return value
 
     @field_validator("slow_request_threshold_ms")

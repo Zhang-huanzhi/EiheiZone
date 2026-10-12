@@ -1,4 +1,5 @@
-import { ChevronDown, UserRound } from "lucide-react";
+import { Bell, ChevronDown, UserRound } from "lucide-react";
+import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
 import { LogoutButton } from "@/features/auth/logout-button";
@@ -7,9 +8,10 @@ import { cn } from "@/lib/utils";
 type AccountMenuProps = {
   displayName: string;
   roleLabel: "Family" | "Owner";
+  notificationsPath?: string;
 };
 
-export function AccountMenu({ displayName, roleLabel }: AccountMenuProps) {
+export function AccountMenu({ displayName, roleLabel, notificationsPath = "/family/settings/notifications" }: AccountMenuProps) {
   return (
     <details className="group relative shrink-0">
       <summary
@@ -33,6 +35,7 @@ export function AccountMenu({ displayName, roleLabel }: AccountMenuProps) {
           <p className="truncate text-sm font-medium">{displayName}</p>
         </div>
         <div className="mt-1 border-t border-border pt-1">
+          <Link className={cn(buttonVariants({ variant: "ghost" }), "w-full justify-start")} href={notificationsPath}><Bell data-icon="inline-start" />通知设置</Link>
           <LogoutButton />
         </div>
       </div>

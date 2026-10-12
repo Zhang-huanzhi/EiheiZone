@@ -36,7 +36,7 @@ export default async function FamilyLayout({ children }: FamilyLayoutProps) {
               <p className="text-sm font-medium text-muted-foreground">Family</p>
               <h1 className="text-3xl font-semibold">家庭区域</h1>
             </div>
-            <AccountMenu displayName={currentUser.display_name} roleLabel="Family" />
+            <AccountMenu displayName={currentUser.display_name} roleLabel="Family" notificationsPath="/family/settings/notifications" />
           </div>
           <AreaNavigation area="family" />
         </header>
