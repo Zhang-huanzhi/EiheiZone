@@ -2,11 +2,9 @@
 .idea/
 **/.idea/
 
-# Local agent instructions
-/AGENTS.md
-
 # Local server connection notes (never commit host credentials or private keys)
-.codex/server-login.local.md
+.local/
+.codex/
 
 # Python
 backend/.venv/
