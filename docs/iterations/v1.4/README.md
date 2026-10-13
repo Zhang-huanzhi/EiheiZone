@@ -10,3 +10,4 @@ v1.4 的功能或相关变更应分别建立迭代文档，记录目标、范围
 ## 当前迭代
 
 - [V1.4 / 001 微信测试号通知 PoC](001-wechat-test-notifications.md)
+- [V1.4 / 002 Codex 到 Cursor 交接](002-cursor-handoff.md)（Accepted，2026-10-13）

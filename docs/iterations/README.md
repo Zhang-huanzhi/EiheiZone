@@ -4,11 +4,14 @@ V1 之后，一次功能或一组相关变更默认使用一份迭代文档，�
 
 ## 建议结构
 
+日期使用 `YYYY-MM-DD`，记录文档进入当前状态的日期。状态改为 Accepted 或 Released 时，把日期更新为验收或归档当天。
+
 ```markdown
 # 迭代名称
 
 | 目标版本 | v1.x |
-| 状态 | Proposed / In Progress / Released |
+| 状态 | Proposed / In Progress / Accepted / Released |
+| 日期 | YYYY-MM-DD |
 | 分支 | feat/example |
 
 ## 前言
