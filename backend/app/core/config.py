@@ -39,7 +39,6 @@ class Settings(BaseSettings):
     wechat_app_secret: str | None = None
     wechat_token: str | None = None
     wechat_template_id: str | None = None
-    wechat_message_url: str = "https://eihei.zone/family"
     notification_worker_interval_seconds: int = 10
     notification_max_attempts: int = 5
     # Docker resolves this to /app/media; local development uses backend/media.

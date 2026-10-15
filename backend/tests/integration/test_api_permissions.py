@@ -92,6 +92,9 @@ def login_with_csrf(client: TestClient, login_name: str) -> str:
         ("patch", f"/api/v1/expenditures/{uuid4()}", {"category": "Updated"}),
         ("delete", f"/api/v1/expenditures/{uuid4()}", None),
         ("get", "/api/v1/dashboard", None),
+        ("get", "/api/v1/notifications/wechat", None),
+        ("post", "/api/v1/notifications/wechat/code", None),
+        ("delete", "/api/v1/notifications/wechat", None),
     ],
 )
 def test_public_is_rejected_by_every_protected_operation(

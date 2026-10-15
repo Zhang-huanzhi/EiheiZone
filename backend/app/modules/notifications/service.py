@@ -10,7 +10,15 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError
 from app.modules.auth.models import User
 from app.modules.notifications.models import WeChatBinding, WeChatBindingCode
-from app.modules.notifications.repository import active_recipients, add_outbox, get_binding, get_binding_code, get_binding_by_open_id
+from app.modules.notifications.repository import (
+    active_owners,
+    active_recipients,
+    add_outbox,
+    get_active_recipient,
+    get_binding,
+    get_binding_by_open_id,
+    get_binding_code,
+)
 
 CODE_TTL = timedelta(minutes=10)
 
@@ -44,6 +52,7 @@ def bind_open_id_by_code(db: Session, *, open_id: str, raw_code: str) -> str:
     existing = get_binding_by_open_id(db, open_id)
     if existing and existing.user_id != code.user_id:
         db.delete(existing)
+        db.flush()
     current = get_binding(db, code.user_id)
     if current:
         current.open_id = open_id
@@ -65,13 +74,14 @@ def enqueue_new_post(db: Session, *, post_id: UUID) -> None:
 
 
 def enqueue_new_question(db: Session, *, qa_id: UUID) -> None:
-    from app.modules.auth.models import UserRole
-    owners = db.query(User.id).filter(User.role == UserRole.OWNER).all()
-    enqueue_event(db, event_type="qa_created", aggregate_id=qa_id, recipient_ids=[row[0] for row in owners])
+    enqueue_event(db, event_type="qa_created", aggregate_id=qa_id, recipient_ids=[owner.id for owner in active_owners(db)])
 
 
 def enqueue_answer(db: Session, *, qa_id: UUID, asker_id: UUID) -> None:
-    enqueue_event(db, event_type="qa_answered", aggregate_id=qa_id, recipient_ids=[asker_id])
+    asker = get_active_recipient(db, asker_id)
+    if asker is None:
+        return
+    enqueue_event(db, event_type="qa_answered", aggregate_id=qa_id, recipient_ids=[asker.id])
 
 
 def _hash_code(raw: str) -> str:

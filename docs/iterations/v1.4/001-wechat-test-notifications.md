@@ -3,7 +3,8 @@
 | 项目 | 内容 |
 | --- | --- |
 | 目标版本 | `v1.4` |
-| 状态 | In Progress |
+| 状态 | Accepted |
+| 日期 | 2026-10-15 |
 | 分支 | `feat/v1.4-001-wechat-test-notifications` |
 
 ## 1. 目标
@@ -53,10 +54,11 @@
 | 前端类型与 ESLint | PASS | `tsc --noEmit --incremental false`、目标 ESLint 检查通过 |
 | 前端 Vitest | PASS | AccountMenu 回归 1 test passed；当前未新增组件自动化测试 |
 | Compose 配置 | 待验证 | 当前环境未安装 Docker CLI |
-| 微信真实人工验收 | 待部署后验证 | 需要配置测试号凭据、回调地址和模板 ID |
+| 微信真实人工验收 | Accepted | 2026-10-15：回调校验通过，绑定成功；新建问题通知了 Owner，首次回答通知了提问人。凭据不写入本文档。新建近况的送达、卡片正文显示和可随镜像保留的代码修复留在 [`003-wechat-notification-completion.md`](003-wechat-notification-completion.md) |
 
 ## 7. 遗留风险
 
 - 微信测试号用户上限和测试账号生命周期限制正式使用；
-- 模板消息接口及消息场景规则需要在实际测试号后台和微信客户端确认；
-- worker 依赖生产环境到微信接口的网络可达性。
+- 模板卡片目前只显示标题和日期，事项正文没有显示出来；
+- 新建近况的微信送达还没有做人工验收；
+- 线上 worker 的查询修复和去链接发送还是容器内的临时文件，重建镜像后会丢失。这两项都记在 003，003 保持 In Progress。
