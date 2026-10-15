@@ -54,6 +54,7 @@ Git commands are allowed in this repository. Use them carefully:
 - Continue later edits on that same branch. Do not open another branch for the same feature, and do not split one change across several branches.
 - After that branch is merged, start the next piece of work from `main` on one new branch.
 - Status, diff, and log are fine. Commit, push, open a Pull Request, or merge only when the user explicitly asks.
+- The author and committer of every commit are Zhang Huanzhi `<zhanghuanzhi520@gmail.com>`. Do not add a `Co-authored-by` trailer for Cursor or any other agent.
 - Do not force-push, hard-reset, or rewrite published history unless the user explicitly asks.
 - Do not initialize, commit, or push the parent `EiheiZone` directory or `notes/` unless the user explicitly asks.
 
