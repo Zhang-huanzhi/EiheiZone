@@ -2,13 +2,14 @@
 
 from hashlib import sha1
 import json
-from time import monotonic
+from time import monotonic, time
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from xml.etree import ElementTree
 
 from app.core.config import get_settings
+from app.core.errors import AppError
 
 
 class WeChatError(RuntimeError):
@@ -34,18 +35,22 @@ class WeChatClient:
         self._token_expires_at = monotonic() + int(payload.get("expires_in", 7200)) - 60
         return self._token
 
-    def send_template(self, *, open_id: str, title: str, url: str) -> str:
+    def send_template(self, *, open_id: str, summary: str, happened_at: str) -> str:
         settings = get_settings()
         if not settings.wechat_template_id:
             raise WeChatError("WECHAT_TEMPLATE_ID is not configured")
         payload = {
             "touser": open_id,
             "template_id": settings.wechat_template_id,
-            "url": url,
-            "data": {"first": {"value": title}, "remark": {"value": "点击查看详情"}},
+            "data": {
+                "keyword1": {"value": summary},
+                "keyword2": {"value": happened_at},
+            },
         }
         result = self._request_json(f"https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={self.access_token()}", payload)
         if result.get("errcode", 0) != 0:
+            self._token = None
+            self._token_expires_at = 0.0
             raise WeChatError(str(result.get("errmsg", "template send failed")))
         return str(result.get("msgid", ""))
 
@@ -61,9 +66,13 @@ def valid_signature(*, token: str, timestamp: str, nonce: str, signature: str) -
 
 
 def parse_message(body: bytes) -> dict[str, str]:
-    root = ElementTree.fromstring(body)
+    try:
+        root = ElementTree.fromstring(body)
+    except ElementTree.ParseError as error:
+        raise AppError(status_code=400, code="WECHAT_XML_INVALID", message="Invalid WeChat XML payload") from error
     return {child.tag: child.text or "" for child in root}
 
 
 def xml_reply(*, open_id: str, account_id: str, content: str) -> str:
-    return f"<xml><ToUserName><![CDATA[{open_id}]]></ToUserName><FromUserName><![CDATA[{account_id}]]></FromUserName><CreateTime>0</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[{content}]]></Content></xml>"
+    created_at = int(time())
+    return f"<xml><ToUserName><![CDATA[{open_id}]]></ToUserName><FromUserName><![CDATA[{account_id}]]></FromUserName><CreateTime>{created_at}</CreateTime><MsgType><![CDATA[text]]></MsgType><Content><![CDATA[{content}]]></Content></xml>"
