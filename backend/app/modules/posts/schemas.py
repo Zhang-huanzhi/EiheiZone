@@ -10,6 +10,7 @@ from app.modules.posts.models import PostVisibility
 
 MAX_TITLE_LENGTH = 120
 MAX_BODY_LENGTH = 10000
+MAX_COMMENT_LENGTH = 2000
 MAX_IMAGES = 9
 
 
@@ -104,3 +105,33 @@ class PostResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     images: list[PostImageResponse] = Field(default_factory=list)
+
+
+def _validate_comment(value: str) -> str:
+    if not value.strip():
+        raise ValueError("Comment must not be blank")
+    if len(value) > MAX_COMMENT_LENGTH:
+        raise ValueError("Comment must contain at most 2000 characters")
+    return value
+
+
+class PostCommentCreate(BaseModel):
+    """Accept one plain-text comment for a visible Post."""
+
+    body: str
+
+    @field_validator("body")
+    @classmethod
+    def validate_body(cls, value: str) -> str:
+        return _validate_comment(value)
+
+
+class PostCommentResponse(BaseModel):
+    """Return a comment and its client-safe author identity."""
+
+    id: UUID
+    post_id: UUID
+    author_id: UUID
+    author_display_name: str = Field(min_length=1, max_length=80)
+    body: str = Field(min_length=1, max_length=MAX_COMMENT_LENGTH)
+    created_at: datetime

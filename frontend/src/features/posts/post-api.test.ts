@@ -8,6 +8,11 @@ import {
   getPublicPosts,
   updatePost,
 } from "@/features/posts/post-api";
+import {
+  createPostComment,
+  deletePostComment,
+  getPostComments,
+} from "@/features/posts/post-comment-api";
 import { apiRequest } from "@/lib/api/client";
 
 vi.mock("@/features/auth/auth-api", () => ({ getCsrfToken: vi.fn() }));
@@ -58,6 +63,44 @@ describe("Post API", () => {
       3,
       "/posts/post-id",
       expect.objectContaining({ method: "DELETE", headers: { "X-CSRF-Token": "csrf-token" } }),
+    );
+  });
+
+  it("uses the authenticated comment resource and pagination", async () => {
+    mockedApiRequest.mockResolvedValue({ items: [], total: 0, offset: 20, limit: 20 });
+
+    await getPostComments("post-id", { offset: 20, limit: 5 });
+
+    expect(mockedApiRequest).toHaveBeenCalledWith(
+      "/posts/post-id/comments?offset=20&limit=5",
+      {},
+    );
+  });
+
+  it("gets a CSRF token for comment create and delete", async () => {
+    mockedGetCsrfToken.mockResolvedValue("csrf-token");
+    mockedApiRequest.mockResolvedValue({});
+
+    await createPostComment("post-id", { body: "A comment" });
+    await deletePostComment("post-id", "comment-id");
+
+    expect(mockedGetCsrfToken).toHaveBeenCalledTimes(2);
+    expect(mockedApiRequest).toHaveBeenNthCalledWith(
+      1,
+      "/posts/post-id/comments",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ body: "A comment" }),
+        headers: expect.objectContaining({ "X-CSRF-Token": "csrf-token" }),
+      }),
+    );
+    expect(mockedApiRequest).toHaveBeenNthCalledWith(
+      2,
+      "/posts/post-id/comments/comment-id",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: { "X-CSRF-Token": "csrf-token" },
+      }),
     );
   });
 });

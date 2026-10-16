@@ -210,7 +210,7 @@ The server keeps its production `.env`, deployment state, database, and media vo
 ## v1.1 boundaries and known risks
 
 - The application UI is Chinese-only and requires a network connection; there is no offline family-data cache.
-- The application excludes registration, invitations, self-service password recovery, general file attachments beyond Post images, comments, chat, notifications, search, AI, and complete accounting/reporting.
+- The application excludes registration, invitations, self-service password recovery, general file attachments beyond Post images, threaded comment replies, chat, search, AI, and complete accounting/reporting.
 - Published Post images cannot yet be added, removed, or reordered; orphan image cleanup is a manual maintenance action.
 - PostgreSQL and Post images are persisted in Docker named volumes. Off-host encrypted backup and recovery testing are deferred, so host loss can cause permanent data loss.
 - Re-run dependency audits and the full regression suite before broader deployment.

@@ -34,6 +34,18 @@ npm run build
 
 Use `frontend/e2e/run-local.ps1` for Playwright workflows. Run migrations and migration tests only against dedicated development or test databases.
 
+## Local Environment Protection
+
+- 默认只修改仓库内已跟踪的源代码、测试、Migration 和文档。不要把本机环境修复当作代码任务的一部分。
+- 未经用户明确要求，不得创建、删除、移动、重命名或重建 `backend/.venv`、`frontend/node_modules`、`.idea`、缓存目录、测试临时目录、覆盖率目录、Docker 容器/卷或任何仓库外路径。
+- 未经用户明确要求，不得运行 `uv sync`、`uv pip install`、`pip install`、`npm install`、`npm ci`、全局包管理器、系统包管理器或修改 PATH、注册表、IDE 全局设置、Shell 配置和用户目录配置。依赖缺失时先报告，不自动改变环境。
+- 不得通过删除缓存、测试临时目录或未跟踪文件来“清理”工作树；只报告权限或残留问题。清理必须得到用户明确授权，并且限定具体路径。
+- 不得使用 `git clean`、`git reset`、`git checkout --`、`git restore` 或其他会丢弃工作树内容的命令；不得擅自切换或删除分支。
+- 不得修改被 `.gitignore` 忽略的 `.idea`、`.env`、`.venv`、`node_modules`、`.next`、覆盖率和测试产物来解决代码问题。只有用户明确要求修复当前 IDE 项目运行配置时，才允许把该项目配置中的绝对路径改成 `$PROJECT_DIR$` 相对路径；仍不得修改 IDE 全局解释器、全局 SDK、注册表或用户目录配置。
+- 后端命令优先使用现有 `backend/.venv/Scripts/python.exe` 和 `backend/.venv/Scripts/ruff.exe`；前端命令优先使用现有 `frontend/node_modules/.bin`。如果路径不存在，只报告并等待用户决定，不自动创建替代环境。
+- 测试、构建和迁移命令必须明确目标数据库和输出目录；不得连接生产数据库，不得对开发数据库执行破坏性操作。任何需要修改本机服务、数据库、容器或外部服务器的操作都必须先说明范围并获得用户明确授权。
+- 不要为了验证而启动长期驻留服务、后台进程或自动重载进程；需要手动测试时只给出启动命令和项目内的工作目录，除非用户明确要求代理启动并管理服务。
+
 ## Coding Style & Naming Conventions
 
 Python uses four spaces, `snake_case` functions and modules, and `PascalCase` classes. Keep authorization, transactions, and business rules in services. TypeScript uses two spaces, `kebab-case` filenames, `PascalCase` components, and `camelCase` values. Follow Ruff, ESLint, and TypeScript checks; avoid introducing a new abstraction when an existing project pattern is sufficient.
