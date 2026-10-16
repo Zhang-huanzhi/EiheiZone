@@ -94,6 +94,12 @@ class Post(Base):
         order_by="PostImage.position",
         passive_deletes="all",
     )
+    comments: Mapped[list["PostComment"]] = relationship(
+        "PostComment",
+        back_populates="post",
+        order_by="PostComment.created_at.desc(), PostComment.id.desc()",
+        passive_deletes="all",
+    )
 
 
 class PostImage(Base):
@@ -149,3 +155,34 @@ class PostImage(Base):
     @property
     def url(self) -> str:
         return f"/api/v1/media/images/{self.id}"
+
+
+class PostComment(Base):
+    """One flat text comment authored by a Family or Owner user on a Post."""
+
+    __tablename__ = "post_comments"
+    __table_args__ = (
+        CheckConstraint(
+            "char_length(body) BETWEEN 1 AND 2000 AND char_length(btrim(body)) >= 1",
+            name="post_comment_body_length",
+        ),
+        Index(
+            "ix_post_comments_post_created_at",
+            "post_id",
+            text("created_at DESC"),
+            text("id DESC"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    post_id: Mapped[UUID] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"))
+    author_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+    post: Mapped[Post] = relationship("Post", back_populates="comments")
+    author: Mapped[object] = relationship("User")

@@ -8,17 +8,27 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError
 from app.core.pagination import Page, PaginationParams
 from app.modules.auth.models import User, UserRole
-from app.modules.posts.models import Post, PostImageStatus
+from app.modules.posts.models import Post, PostComment, PostImageStatus
 from app.modules.posts.image_service import attach_images, delete_detached_images
 from app.modules.posts.repository import (
+    add_comment,
     add_post,
+    delete_comment,
     delete_post,
+    get_comment,
     get_public_post,
     get_visible_post,
+    list_comments,
     list_public_posts,
     list_visible_posts,
 )
-from app.modules.posts.schemas import PostCreate, PostResponse, PostUpdate
+from app.modules.posts.schemas import (
+    PostCommentCreate,
+    PostCommentResponse,
+    PostCreate,
+    PostResponse,
+    PostUpdate,
+)
 from app.modules.notifications.service import enqueue_new_post
 
 
@@ -110,6 +120,78 @@ def remove_post(db: Session, *, user: User, post_id: UUID) -> None:
     delete_detached_images(db, images)
 
 
+def list_post_comments_for_user(
+    db: Session,
+    *,
+    user: User,
+    post_id: UUID,
+    pagination: PaginationParams,
+) -> Page[PostCommentResponse]:
+    """Return comments only when the user can read the referenced Post."""
+
+    _require_reader(user)
+    _get_visible_post_or_404(db, post_id)
+    items, total = list_comments(
+        db,
+        post_id=post_id,
+        offset=pagination.offset,
+        limit=pagination.limit,
+    )
+    return Page(
+        items=[_comment_to_response(comment) for comment in items],
+        total=total,
+        offset=pagination.offset,
+        limit=pagination.limit,
+    )
+
+
+def create_post_comment(
+    db: Session,
+    *,
+    user: User,
+    post_id: UUID,
+    payload: PostCommentCreate,
+) -> PostCommentResponse:
+    """Create a plain-text comment on a visible Post."""
+
+    _require_reader(user)
+    _get_visible_post_or_404(db, post_id)
+    comment = PostComment(
+        id=uuid4(),
+        post_id=post_id,
+        author_id=user.id,
+        author=user,
+        body=payload.body,
+    )
+    add_comment(db, comment)
+    _commit_and_refresh(db, comment)
+    return _comment_to_response(comment)
+
+
+def remove_post_comment(
+    db: Session,
+    *,
+    user: User,
+    post_id: UUID,
+    comment_id: UUID,
+) -> None:
+    """Delete a comment when requested by its author or an Owner."""
+
+    _require_reader(user)
+    _get_visible_post_or_404(db, post_id)
+    comment = get_comment(db, post_id=post_id, comment_id=comment_id)
+    if comment is None:
+        raise _comment_not_found()
+    if user.role is not UserRole.OWNER and comment.author_id != user.id:
+        raise AppError(
+            status_code=403,
+            code="FORBIDDEN",
+            message="Comment deletion is not allowed",
+        )
+    delete_comment(db, comment)
+    _commit(db)
+
+
 def _page(items: list[Post], total: int, pagination: PaginationParams) -> Page[PostResponse]:
     return Page(
         items=[_to_response(post) for post in items],
@@ -155,13 +237,38 @@ def _to_response(post: Post) -> PostResponse:
     )
 
 
+def _comment_to_response(comment: PostComment) -> PostCommentResponse:
+    author_display_name = getattr(comment.author, "display_name", None)
+    if not isinstance(author_display_name, str):
+        raise RuntimeError("Post comment author relationship is not loaded")
+    return PostCommentResponse(
+        id=comment.id,
+        post_id=comment.post_id,
+        author_id=comment.author_id,
+        author_display_name=author_display_name,
+        body=comment.body,
+        created_at=comment.created_at,
+    )
+
+
+def _get_visible_post_or_404(db: Session, post_id: UUID) -> Post:
+    post = get_visible_post(db, post_id)
+    if post is None:
+        raise _post_not_found()
+    return post
+
+
 def _post_not_found() -> AppError:
     return AppError(status_code=404, code="POST_NOT_FOUND", message="Post was not found")
 
 
-def _commit_and_refresh(db: Session, post: Post) -> None:
+def _comment_not_found() -> AppError:
+    return AppError(status_code=404, code="COMMENT_NOT_FOUND", message="Comment was not found")
+
+
+def _commit_and_refresh(db: Session, entity: Post | PostComment) -> None:
     _commit(db)
-    db.refresh(post)
+    db.refresh(entity)
 
 
 def _commit(db: Session) -> None:

@@ -164,3 +164,86 @@ def test_owner_post_writes_require_bound_csrf_and_validate_fields(
     assert empty_patch.status_code == 422
     assert deleted.status_code == 204
     assert client.get(f"/api/v1/posts/{post_id}").status_code == 404
+
+
+def test_post_comments_require_login_csrf_and_author_or_owner_delete(
+    client: TestClient,
+    test_session: Session,
+) -> None:
+    owner_name = create_account(test_session, UserRole.OWNER)
+    family_name = create_account(test_session, UserRole.FAMILY)
+    other_family_name = create_account(test_session, UserRole.FAMILY)
+
+    owner_csrf = login_with_csrf(client, owner_name)
+    post_response = client.post(
+        "/api/v1/posts",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
+        json={"title": "Comment target", "body": "Post body"},
+    )
+    assert post_response.status_code == 201
+    post_id = post_response.json()["id"]
+
+    client.post(
+        "/api/v1/auth/logout",
+        headers={
+            "Origin": ORIGIN,
+            "X-CSRF-Token": client.get("/api/v1/auth/csrf").json()["csrf_token"],
+        },
+    )
+    family_csrf = login_with_csrf(client, family_name)
+    missing_csrf = client.post(
+        f"/api/v1/posts/{post_id}/comments",
+        headers={"Origin": ORIGIN},
+        json={"body": "Missing CSRF"},
+    )
+    created = client.post(
+        f"/api/v1/posts/{post_id}/comments",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": family_csrf},
+        json={"body": "Family comment"},
+    )
+    comment_id = created.json()["id"]
+    listed = client.get(f"/api/v1/posts/{post_id}/comments")
+
+    assert missing_csrf.status_code == 403
+    assert created.status_code == 201
+    assert listed.status_code == 200
+    assert listed.json()["items"][0]["author_display_name"] == "Family API User"
+    assert "login_name" not in listed.json()["items"][0]
+
+    client.post(
+        "/api/v1/auth/logout",
+        headers={
+            "Origin": ORIGIN,
+            "X-CSRF-Token": client.get("/api/v1/auth/csrf").json()["csrf_token"],
+        },
+    )
+    other_family_csrf = login_with_csrf(client, other_family_name)
+    forbidden = client.delete(
+        f"/api/v1/posts/{post_id}/comments/{comment_id}",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": other_family_csrf},
+    )
+    assert forbidden.status_code == 403
+
+    client.post(
+        "/api/v1/auth/logout",
+        headers={
+            "Origin": ORIGIN,
+            "X-CSRF-Token": client.get("/api/v1/auth/csrf").json()["csrf_token"],
+        },
+    )
+    owner_csrf = login_with_csrf(client, owner_name)
+    deleted = client.delete(
+        f"/api/v1/posts/{post_id}/comments/{comment_id}",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
+    )
+    assert deleted.status_code == 204
+
+    client.post(
+        "/api/v1/auth/logout",
+        headers={
+            "Origin": ORIGIN,
+            "X-CSRF-Token": client.get("/api/v1/auth/csrf").json()["csrf_token"],
+        },
+    )
+    assert client.get(f"/api/v1/posts/{post_id}/comments").status_code == 401
+    assert client.get(f"/api/v1/public/posts/{post_id}/comments").status_code == 404

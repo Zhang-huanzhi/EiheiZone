@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.modules.posts.models import Post, PostVisibility
+from app.modules.posts.models import Post, PostComment, PostVisibility
 
 
 def list_public_posts(db: Session, *, offset: int, limit: int) -> tuple[list[Post], int]:
@@ -47,6 +47,51 @@ def delete_post(db: Session, post: Post) -> None:
     """Stage a hard deletion without committing it."""
 
     db.delete(post)
+
+
+def list_comments(
+    db: Session,
+    *,
+    post_id: UUID,
+    offset: int,
+    limit: int,
+) -> tuple[list[PostComment], int]:
+    """Return comments for one Post in stable newest-first order."""
+
+    statement = (
+        select(PostComment)
+        .options(joinedload(PostComment.author))
+        .where(PostComment.post_id == post_id)
+        .order_by(PostComment.created_at.desc(), PostComment.id.desc())
+    )
+    items = list(db.scalars(statement.offset(offset).limit(limit)))
+    total = db.scalar(
+        select(func.count()).select_from(PostComment).where(PostComment.post_id == post_id)
+    )
+    return items, int(total or 0)
+
+
+def get_comment(db: Session, *, post_id: UUID, comment_id: UUID) -> PostComment | None:
+    """Return one comment with its client-safe author relationship loaded."""
+
+    statement = (
+        select(PostComment)
+        .options(joinedload(PostComment.author))
+        .where(PostComment.id == comment_id, PostComment.post_id == post_id)
+    )
+    return db.scalar(statement)
+
+
+def add_comment(db: Session, comment: PostComment) -> None:
+    """Stage a new comment for the surrounding service transaction."""
+
+    db.add(comment)
+
+
+def delete_comment(db: Session, comment: PostComment) -> None:
+    """Stage a hard deletion without committing it."""
+
+    db.delete(comment)
 
 
 def _ordered_posts():

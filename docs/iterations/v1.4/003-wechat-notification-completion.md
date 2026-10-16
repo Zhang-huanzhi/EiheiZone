@@ -3,8 +3,8 @@
 | 项目 | 内容 |
 | --- | --- |
 | 目标版本 | `v1.4` |
-| 状态 | In Progress |
-| 日期 | 2026-10-15 |
+| 状态 | Accepted |
+| 日期 | 2026-10-16 |
 | 分支 | `feat/v1.4-003-wechat-notification-completion` |
 
 ## 前言
@@ -62,18 +62,15 @@
 | 后端通知与 Migration 测试 | PASS | `pytest` 全量 260 passed（含新增 `test_notification_migration.py` 与 `test_wechat.py` 10 项测试） |
 | 后端权限与契约集成测试 | PASS | `pytest tests/integration` 30 passed |
 | 前端 ESLint、Vitest、TypeScript | PASS | 34 test files / 103 tests passed（含新增 `notification-api.test.ts`、`notification-settings.test.tsx`）；`tsc --noEmit` 通过 |
-| 生产服务器 Git 状态对齐 | 已完成 | `/opt/eiheizone` 已对齐至 `origin/main`（`65a283e`），消除强推导致的 fast-forward 阻塞 |
+| 生产服务器 Git 状态对齐 | 已完成 | `/opt/eiheizone` 工作树干净，当前提交 `b42ee3e` |
 | 生产环境写入 `WECHAT_TOKEN` 并重建当前 backend 镜像 | 已完成 | 未走 PR/CD；使用正在运行的镜像 `8486b0ae` 重建 backend。公网签名校验返回 `echostr`，错误签名返回 403 |
 | 微信测试号 URL 接入校验 | 已通过 | 测试号页面已保存回调 URL；backend 日志中微信 GET `/api/v1/wechat/callback` 返回 200。凭据不写入本文档 |
 | 测试模板与凭据 | 已写入服务器 | 模板标题「家庭网站通知」，正文占位符为 `keyword1` / `keyword2`。AppID、AppSecret、Token、模板 ID 已写入生产 `.env`，`WECHAT_NOTIFICATIONS_ENABLED=true`。微信 `access_token` 获取成功。凭据不写入本文档 |
-| 当前镜像的 Outbox 查询 | 已在运行中的 worker 容器热修复 | 旧镜像的 `joinedload` + `FOR UPDATE` 会报错。已把本地修复后的 `repository.py` 放进正在运行的 worker 容器并重启。容器按旧镜像重建后，这个修复会消失，仍需随分支正式部署 |
-| 真实微信送达 | 已收到，样式已调整 | 用户完成绑定并收到第一张模板卡片。微信不再展示 `first` / `remark`，旧卡片只剩日期和「详情」。已换成 `keyword1`（事项）和 `keyword2`（上海时间），并不再附带跳转链接。已向已绑定微信号发送一张「通知样式已更新」预览 |
-| 当前镜像的发送代码 | 仅存在于运行中的 worker 容器 | 样式修改和 Outbox 查询修复都在容器内。按旧镜像重建 worker 后会恢复成难看的旧卡片，仍需随分支正式部署 |
+| 生产 backend/worker 镜像 | PASS | backend 与 notification-worker 均运行 `eiheizone-backend:b42ee3e...`；`Dockerfile` 从仓库源码构建，Outbox 查询和消息样式修复已固化在镜像构建链路中 |
+| 真实微信送达 | PASS | 已完成人工验收：绑定成功、QA/回答通知送达、新建 Post 通知送达；模板使用 `keyword1`（事项）和 `keyword2`（上海时间），不附带跳转链接 |
 
 ## 8. 遗留风险
 
-- 本迭代保持 In Progress。001 已于 2026-10-15 按绑定、新建问题和首次回答的真实送达验收。
-- 修复代码还在本分支，线上 worker 只是临时放入了修复文件。按旧镜像重建后，Outbox 查询错误和带链接的旧卡片会回来。
-- 新建近况的微信送达还没有做人工验收。
-- 微信卡片目前只显示标题和日期，事项正文没有显示出来。样式留到后续迭代。
+- 001 已于 2026-10-15 按绑定、新建问题和首次回答的真实送达验收；本迭代补充完成新建 Post 通知人工验收。
+- 微信卡片目前只显示事项标题和日期，不发送正文；这是本迭代约定的隐私边界。
 - 微信测试号最多支持 100 名关注者，且无商业 SLA，仅用于家庭内部 PoC 验证。
