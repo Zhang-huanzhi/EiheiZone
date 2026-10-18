@@ -208,6 +208,24 @@ def test_binding_code_lifecycle_and_openid_binding(test_session: Session) -> Non
     assert binding_status(test_session, user=family_b)["bound"] is False
 
 
+def test_bound_user_cannot_create_binding_code_until_unbound(test_session: Session) -> None:
+    family = create_account(test_session, UserRole.FAMILY)
+    test_session.add(WeChatBinding(user_id=family.id, open_id="openid-bound"))
+    test_session.commit()
+
+    with pytest.raises(AppError) as bound_error:
+        create_binding_code(test_session, user=family)
+    assert bound_error.value.status_code == 409
+    assert bound_error.value.code == "WECHAT_ALREADY_BOUND"
+    assert test_session.scalar(
+        select(WeChatBindingCode).where(WeChatBindingCode.user_id == family.id)
+    ) is None
+
+    unbind(test_session, user=family)
+    code, _ = create_binding_code(test_session, user=family)
+    assert code
+
+
 def test_expired_binding_code_is_rejected(test_session: Session) -> None:
     family = create_account(test_session, UserRole.FAMILY)
     raw_code, _ = create_binding_code(test_session, user=family)
@@ -485,6 +503,13 @@ def test_wechat_callback_and_notification_settings_api(
     assert bound_status.status_code == 200
     assert bound_status.json()["bound"] is True
     assert bound_status.json()["bound_at"] is not None
+
+    bound_code_res = client.post(
+        "/api/v1/notifications/wechat/code",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": csrf_token},
+    )
+    assert bound_code_res.status_code == 409
+    assert bound_code_res.json()["error"]["code"] == "WECHAT_ALREADY_BOUND"
 
     invalid_bind_res = client.post(
         "/api/v1/wechat/callback",
