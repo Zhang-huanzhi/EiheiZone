@@ -24,6 +24,12 @@ CODE_TTL = timedelta(minutes=10)
 
 
 def create_binding_code(db: Session, *, user: User) -> tuple[str, datetime]:
+    if get_binding(db, user.id) is not None:
+        raise AppError(
+            status_code=409,
+            code="WECHAT_ALREADY_BOUND",
+            message="WeChat is already bound",
+        )
     raw = secrets.token_urlsafe(6).upper().replace("-", "").replace("_", "")[:8]
     expires_at = datetime.now(UTC) + CODE_TTL
     db.query(WeChatBindingCode).filter(WeChatBindingCode.user_id == user.id, WeChatBindingCode.used_at.is_(None)).update({WeChatBindingCode.used_at: datetime.now(UTC)})
