@@ -106,7 +106,9 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Validate deployment scripts
-        run: bash -n deploy.sh rollback.sh
+        run: |
+          bash -n deploy.sh rollback.sh backup-to-cos.sh
+          python3 tests/scripts/test_backup_to_cos.py
 
       - name: Validate Compose configuration
         run: |

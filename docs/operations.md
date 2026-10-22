@@ -95,6 +95,76 @@ sudo docker compose exec backend python scripts/cleanup_post_images.py
 
 ## 7. 备份与秘密
 
-named volume 只能覆盖容器重建和正常重启，不能覆盖 VPS 整机损坏、误删或磁盘不可用。可恢复备份至少必须成对覆盖 PostgreSQL 与 `media_data`，并通过隔离环境的恢复演练证明数据库记录与图片文件一致；异机加密备份和定期恢复演练当前仍未完成。
+named volume 只能覆盖容器重建和正常重启，不能覆盖 VPS 整机损坏、误删或磁盘不可用。`backup-to-cos.sh` 每天将 PostgreSQL custom dump 与 `/app/media` 图片归档为一份备份，通过 rclone crypt 客户端加密后上传到腾讯云 COS，保留最近 7 份。脚本在本地快照期间短暂停止 backend；本地数据库和图片快照完成后先恢复 backend 并等待健康检查，再执行网络上传。
+
+### 初始化 COS 备份
+
+由账号持有人在腾讯云控制台完成以下准备：
+
+1. 确认账号已启用按量计费并查看当前地域费用。创建首尔地域（`ap-seoul`）私有标准存储桶；存储桶名称需使用你在控制台选定的实际名称。
+2. 创建专用 CAM 子用户和访问密钥，并将权限限制到该存储桶及备份前缀。权限需满足 rclone 对象列举、上传、下载、删除及必要的分段上传操作。不要把主账号密钥用于服务器。
+3. 在 VPS 创建权限受限的配置目录，并用 rclone 交互式配置两个 remote。第一个 remote 命名为 `cos`，类型 `s3`，Provider 选择 `TencentCOS`，填写 CAM 访问密钥，region `ap-seoul`、endpoint `cos.ap-seoul.myqcloud.com`，ACL 设为 `private`；其他选项保留默认值。第二个 remote 命名为 `cos-crypt`，类型 `crypt`，Remote 填 `cos:<控制台桶名>/eiheizone-backups`，启用文件名和目录名加密，并生成新的强密码。将该密码另存于密码管理器。配置目录为 `0700`、配置文件为 `0600`；配置文件包含 COS 凭证和 rclone crypt 密码，禁止提交 Git。
+
+   ```bash
+   sudo install -d -m 700 /etc/rclone
+   sudo rclone --config /etc/rclone/rclone.conf config
+   sudo chmod 600 /etc/rclone/rclone.conf
+   ```
+4. 使用只含虚构内容的临时文件，通过 crypt remote 上传、下载并比较文件，然后删除 COS 上的临时对象。将 crypt 密码另行存入密码管理器；恢复时需要这份密码，丢失后无法解密备份。
+5. 确认仓库部署到 `/opt/eiheizone` 后，创建本地目录并安装 root 定时任务：
+
+   ```bash
+   sudo install -d -m 700 /var/backups/eiheizone
+   sudo crontab -e
+   ```
+
+   添加以下条目：
+
+   ```cron
+   CRON_TZ=Asia/Seoul
+   0 3 * * * /bin/bash /opt/eiheizone/backup-to-cos.sh >> /var/log/eiheizone-backup.log 2>&1
+   ```
+
+首次正式执行前，以 root 手工运行一次 `/bin/bash /opt/eiheizone/backup-to-cos.sh`，确认 `docker compose ps` 显示 backend 健康、COS 中出现当日加密备份。脚本要求以能管理 Docker Compose 的用户运行；默认以 root 运行。快照完成后服务会先恢复，上传在服务健康后进行。上传或远端校验失败时，脚本返回非零并保留本地恢复材料；这些材料包含未加密数据库和图片，权限为 `0700`，应尽快排查上传并在确认远端备份安全后删除。上传和校验成功后本地材料会删除，再清理超出最近 7 份的旧对象。若清理失败，脚本返回失败但不会影响新备份。
+
+通过下列命令人工检查最近日志与服务状态：
+
+```bash
+sudo tail -n 100 /var/log/eiheizone-backup.log
+cd /opt/eiheizone
+sudo docker compose ps
+```
+
+本迭代不配置自动告警；需定期确认日志存在成功记录且 COS 中有最近备份。COS 与 VPS 同属腾讯云，不能覆盖云账号或平台级故障；实际存储和恢复流量费用按腾讯云控制台与账单为准。
+
+### 恢复到新 VPS
+
+准备代码仓库、生产 `.env`、rclone 配置和 crypt 恢复密码。`.env`、COS 凭证和恢复密码必须分别保存在安全位置，不能只保存在故障 VPS 或同一个备份中。先准备新的空 PostgreSQL 数据库及 `media_data` volume；不得在恢复前启动会执行 Migration 的 backend。
+
+以 root shell 操作恢复文件，避免备份内容被其他本机用户读取：
+
+```bash
+sudo -i
+rclone --config /etc/rclone/rclone.conf copyto \
+  'cos-crypt:eiheizone-backups/<backup-file>' /var/tmp/eiheizone-backup.tar.gz
+install -d -m 700 /var/tmp/eiheizone-restore
+tar -xzf /var/tmp/eiheizone-backup.tar.gz -C /var/tmp/eiheizone-restore
+cd /var/tmp/eiheizone-restore
+sha256sum -c SHA256SUMS
+```
+
+确认目标是新的空数据库后恢复：
+
+```bash
+cd /opt/eiheizone
+docker compose up -d --wait db
+docker compose exec -T db sh -ec 'pg_restore --no-owner -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
+  < /var/tmp/eiheizone-restore/database.dump
+docker compose run --rm --no-deps -T --entrypoint tar backend \
+  -xzf - -C /app/media < /var/tmp/eiheizone-restore/media.tar.gz
+docker compose up -d --wait
+```
+
+`pg_restore` 只可用于新的空数据库；不得对已有生产数据库执行。完整恢复后检查 `/api/v1/health`、登录、家庭内容和 Post 图片，再记录备份时间与验证结果。恢复演练应使用与生产隔离的 Compose 项目、数据库和 media volume；确认当前应用的 Alembic migration 可从备份状态升级。应用启动会自动执行 `alembic upgrade head`，不兼容 Migration 必须先制定单独恢复方案。
 
 不得提交 `.env`、SSH 私钥、PEM、`signing.keystore`、签名密码、数据库备份、媒体卷副本或真实家庭数据。公开文档只记录管理原则、非敏感路径和验证结果。
