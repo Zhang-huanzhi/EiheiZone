@@ -7,7 +7,8 @@ umask 077
 readonly PROJECT_DIR="${PROJECT_DIR:-/opt/eiheizone}"
 readonly BACKUP_ROOT="${BACKUP_ROOT:-/var/backups/eiheizone}"
 readonly RCLONE_CONFIG="${RCLONE_CONFIG:-/etc/rclone/rclone.conf}"
-readonly BACKUP_REMOTE="${BACKUP_REMOTE:-cos-crypt:eiheizone-backups}"
+# The crypt remote already points at the eiheizone-backups prefix.
+readonly BACKUP_REMOTE="${BACKUP_REMOTE:-cos-crypt:}"
 readonly KEEP_BACKUPS=7
 readonly HEALTH_WAIT_SECONDS=120
 
@@ -21,7 +22,9 @@ log() {
 
 start_backend() {
   log "Starting backend and waiting for its health check."
-  if ! docker compose -f "${PROJECT_DIR}/docker-compose.yml" up -d --no-deps \
+  # --no-recreate keeps the image tag already deployed. A plain up resolves
+  # DEPLOY_IMAGE_TAG to latest and can replace the running release.
+  if ! docker compose -f "${PROJECT_DIR}/docker-compose.yml" up -d --no-deps --no-recreate \
     --wait --wait-timeout "${HEALTH_WAIT_SECONDS}" backend; then
     return 1
   fi
@@ -51,7 +54,7 @@ on_exit() {
 }
 trap on_exit EXIT
 
-for required_command in chmod date docker flock mkdir mktemp rclone rm sha256sum sort tar; do
+for required_command in chmod cmp date docker flock mkdir mktemp rclone rm sha256sum sort tar; do
   command -v "${required_command}" >/dev/null 2>&1 || {
     log "ERROR: required command is missing: ${required_command}"
     exit 1
@@ -110,12 +113,19 @@ if ! rclone --config "${RCLONE_CONFIG}" copyto \
   exit 1
 fi
 
-if ! rclone --config "${RCLONE_CONFIG}" check --download \
-  "${ARCHIVE_PATH}" "${BACKUP_REMOTE}/${BACKUP_NAME}"; then
+verify_copy="${WORK_DIR}/verified-${BACKUP_NAME}"
+if ! rclone --config "${RCLONE_CONFIG}" copyto \
+  "${BACKUP_REMOTE}/${BACKUP_NAME}" "${verify_copy}"; then
   PRESERVE_WORK_DIR=1
   log "ERROR: uploaded backup verification failed."
   exit 1
 fi
+if ! cmp -s "${ARCHIVE_PATH}" "${verify_copy}"; then
+  PRESERVE_WORK_DIR=1
+  log "ERROR: uploaded backup verification failed."
+  exit 1
+fi
+rm -f -- "${verify_copy}"
 
 log "Upload and remote verification succeeded."
 # The verified remote copy is recoverable; remove local plaintext materials before retention work.

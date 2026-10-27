@@ -125,7 +125,7 @@ named volume 只能覆盖容器重建和正常重启，不能覆盖 VPS 整机�
    0 3 * * * /bin/bash /opt/eiheizone/backup-to-cos.sh >> /var/log/eiheizone-backup.log 2>&1
    ```
 
-首次正式执行前，以 root 手工运行一次 `/bin/bash /opt/eiheizone/backup-to-cos.sh`，确认 `docker compose ps` 显示 backend 健康、COS 中出现当日加密备份。脚本要求以能管理 Docker Compose 的用户运行；默认以 root 运行。快照完成后服务会先恢复，上传在服务健康后进行。上传或远端校验失败时，脚本返回非零并保留本地恢复材料；这些材料包含未加密数据库和图片，权限为 `0700`，应尽快排查上传并在确认远端备份安全后删除。上传和校验成功后本地材料会删除，再清理超出最近 7 份的旧对象。若清理失败，脚本返回失败但不会影响新备份。
+首次正式执行前，以 root 手工运行一次 `/bin/bash /opt/eiheizone/backup-to-cos.sh`，确认 `docker compose ps` 显示 backend 健康、COS 中出现当日加密备份。脚本要求以能管理 Docker Compose 的用户运行；默认以 root 运行。快照完成后服务会先恢复，上传在服务健康后进行。恢复 backend 时使用 `docker compose up --no-recreate`，这样不会在缺少 `DEPLOY_IMAGE_TAG` 时把正在运行的镜像换成 `latest`。`cos` remote 需要 `no_check_bucket = true`，避免没有建桶权限的子用户在上传前尝试创建存储桶。上传或远端校验失败时，脚本返回非零并保留本地恢复材料；这些材料包含未加密数据库和图片，权限为 `0700`，应尽快排查上传并在确认远端备份安全后删除。上传和校验成功后本地材料会删除，再清理超出最近 7 份的旧对象。若清理失败，脚本返回失败但不会影响新备份。
 
 通过下列命令人工检查最近日志与服务状态：
 
