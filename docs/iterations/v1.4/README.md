@@ -14,3 +14,4 @@ v1.4 的功能或相关变更应分别建立迭代文档，记录目标、范围
 - [V1.4 / 003 微信测试号通知完善与联调准备](003-wechat-notification-completion.md)（Accepted，2026-10-16）
 - [V1.4 / 004 Post 评论](004-post-comments.md)（Accepted，2026-10-16）
 - [V1.4 / 005 微信已绑定时禁止生成绑定码](005-wechat-bound-code.md)（Accepted，2026-10-18）
+- [V1.4 / 006 COS 基础数据防灾](006-basic-disaster-recovery.md)（In Progress，2026-10-22）
