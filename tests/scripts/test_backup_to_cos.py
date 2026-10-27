@@ -57,6 +57,9 @@ if [[ "$joined" == *" run --rm "* ]]; then
   exit 0
 fi
 if [[ "$joined" == *" up -d "* ]]; then
+  if [[ "$joined" != *"--no-recreate"* ]]; then
+    printf 'START_RECREATES\\n' >> "$MOCK_EVENTS"
+  fi
   printf 'START\\n' >> "$MOCK_EVENTS"
   if [[ -f "$MOCK_FAILURES/start" ]]; then
     rm -f "$MOCK_FAILURES/start"
@@ -78,9 +81,15 @@ shift
 case "$command_name" in
   copyto)
     source="$1"; target="$2"
-    printf 'UPLOAD\\n' >> "$MOCK_EVENTS"
-    if [[ -f "$MOCK_FAILURES/upload" ]]; then exit 1; fi
-    cp "$source" "$MOCK_REMOTE/${target##*/}"
+    if [[ -f "$source" ]]; then
+      printf 'UPLOAD\\n' >> "$MOCK_EVENTS"
+      if [[ -f "$MOCK_FAILURES/upload" ]]; then exit 1; fi
+      cp "$source" "$MOCK_REMOTE/${target##*/}"
+    else
+      printf 'CHECK\\n' >> "$MOCK_EVENTS"
+      if [[ -f "$MOCK_FAILURES/check" ]]; then exit 1; fi
+      cp "$MOCK_REMOTE/${source##*/}" "$target"
+    fi
     ;;
   check)
     shift
@@ -166,6 +175,7 @@ esac
         self.assertLess(events.index("STOP"), events.index("DUMP"))
         self.assertLess(events.index("MEDIA"), events.index("START"))
         self.assertLess(events.index("START"), events.index("UPLOAD"))
+        self.assertNotIn("START_RECREATES", events)
         self.assertLess(events.index("UPLOAD"), events.index("CHECK"))
         self.assertEqual(len(list(self.remote.iterdir())), 7)
         self.assertTrue(old_names.intersection(path.name for path in self.remote.iterdir()))

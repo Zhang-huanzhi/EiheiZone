@@ -5,7 +5,7 @@
 | 目标版本 | `v1.4` |
 | 状态 | In Progress |
 | 日期 | 2026-10-22 |
-| 分支 | `feat/v1.4-006-basic-disaster-recovery` |
+| 分支 | `fix/v1.4-006-backup-restart` |
 
 ## 1. 目标
 
@@ -47,9 +47,9 @@
 | Bash 语法检查 | PASS | `bash -n deploy.sh rollback.sh backup-to-cos.sh` |
 | 备份脚本模拟测试 | PASS | `python tests/scripts/test_backup_to_cos.py`：5 tests passed，覆盖成功保留 7 份、COS 上传失败、远端校验失败、media 快照失败和 backend 重启重试 |
 | Git diff 检查 | PASS | `git diff --check` |
-| COS 虚构文件上传/下载/解密 | NOT RUN | 待账号持有人完成 COS 桶、CAM 密钥和 VPS rclone 配置 |
-| 隔离环境真实备份恢复 | NOT RUN | 尚无上传的真实备份；待 COS 验证后执行并记录 |
-| 生产服务器变更 | NOT RUN | 本地实现未连接或修改生产服务器 |
+| COS 虚构文件上传/下载/解密 | PASS | 2026-10-27：经 `cos-crypt` 上传、下载并比较虚构文件后删除。`cos` remote 设置 `no_check_bucket = true`，子用户不再尝试创建存储桶 |
+| 隔离环境真实备份恢复 | PASS | 备份 `eiheizone-20261027_145534.tar.gz`。下载后与服务器上的本地归档 `cmp` 一致，归档内 `SHA256SUMS` 通过。隔离 Compose 项目 `eiheizone-restore` 恢复后 Alembic 为 `e4f5a6b7c8d9`，与生产相同；`posts` 31、`post_images` 65、`users` 5、`qas` 10，其余业务表行数也与生产一致。媒体文件 65 个，与生产目录和归档中的文件集合一致。演练使用的卷和容器已删除 |
+| 生产服务器变更 | PASS，有限制 | 已安装 rclone 并写入 `/etc/rclone/rclone.conf`，手工备份已上传。backend 当前健康。每日 cron 尚未安装 |
 
 ## 7. 遗留风险
 
@@ -57,3 +57,5 @@
 - COS 与 VPS 同属腾讯云，无法覆盖腾讯云账号或平台级故障。
 - 加密密码遗失会导致备份不可恢复，必须独立保存。
 - 实际费用取决于备份体积、地域和恢复流量，以腾讯云控制台账单及预估为准。
+- 2026-10-27 第一次手工备份时，脚本执行 `docker compose up` 且未带 `DEPLOY_IMAGE_TAG`，把 backend 重建成旧的 `latest` 镜像并短暂不可用。已改回当时的生产镜像 `44b5d77e17fdc85b3384134b4e4f6394861ee031` 并确认健康。脚本已改为 `--no-recreate`，并用下载后 `cmp` 校验单个归档；这两处改动在 `fix/v1.4-006-backup-restart`，尚未进入 `main`。在该修复随部署到达服务器之前，不要安装每日 cron。
+- 每日 cron 尚未安装，备份没有持续运行。2026-10-27 的手工备份和隔离恢复只是一次演练。账号持有人暂不继续推进备份，等理解当前步骤并确实需要时，再安装每日任务。
