@@ -90,5 +90,12 @@ def enqueue_answer(db: Session, *, qa_id: UUID, asker_id: UUID) -> None:
     enqueue_event(db, event_type="qa_answered", aggregate_id=qa_id, recipient_ids=[asker.id])
 
 
+def enqueue_media_cleanup_failure(db: Session, *, run_id: UUID, summary: str) -> None:
+    """Notify active Owners when a media cleanup run leaves failures."""
+
+    del summary
+    enqueue_event(db, event_type="media_cleanup_failed", aggregate_id=run_id, recipient_ids=[owner.id for owner in active_owners(db)])
+
+
 def _hash_code(raw: str) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()

@@ -25,14 +25,24 @@ frontend -> api : POST /api/v1/posts\n(image_ids)
 api -> db : 创建 Post\n按顺序绑定图片为 attached
 api --> frontend : PostResponse
 
+alt Owner 编辑图片
+  frontend -> api : PATCH /api/v1/posts/{post_id}\n(完整 image_ids 列表)
+  api -> db : 按列表重写 position\n新增绑定、移除置为 cleanup_pending
+  api -> media : 删除被移除图片文件
+  api --> frontend : PostResponse
+end
+
 alt 删除已发布 Post
   frontend -> api : DELETE /api/v1/posts/{post_id}
   api -> db : 删除 Post 与图片记录
   api -> media : 删除物理文件
 else 清理未绑定或删除失败的图片
-  api -> db : 查询过期 pending / cleanup_pending
-  api -> media : 删除物理文件
-  api -> db : 删除已清理记录
+  participant "media-cleanup-worker" as worker
+  worker -> db : 查询过期 pending / cleanup_pending
+  worker -> media : 扫描并删除孤立文件
+  worker -> db : 记录统计与失败重试
+  worker -> api : 清理失败事件
+  api -> db : 通知活跃 Owner
 end
 
 @enduml

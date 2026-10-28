@@ -19,6 +19,8 @@ def test_post_migration_downgrades_to_auth_and_upgrades_to_head(
 
     command.upgrade(config, "head")
     inspector = inspect(test_engine)
+    cleanup_columns = {column["name"] for column in inspector.get_columns("post_images")}
+    cleanup_tables = set(inspector.get_table_names())
     columns = {column["name"] for column in inspector.get_columns("posts")}
     comment_columns = {column["name"] for column in inspector.get_columns("post_comments")}
     foreign_keys = inspector.get_foreign_keys("posts")
@@ -33,3 +35,5 @@ def test_post_migration_downgrades_to_auth_and_upgrades_to_head(
     assert any(key["options"].get("ondelete") == "CASCADE" for key in comment_foreign_keys)
     assert any(key["options"].get("ondelete") == "RESTRICT" for key in comment_foreign_keys)
     assert any(index["name"] == "ix_post_comments_post_created_at" for index in comment_indexes)
+    assert {"cleanup_attempts", "last_cleanup_at", "last_cleanup_error"}.issubset(cleanup_columns)
+    assert "media_cleanup_runs" in cleanup_tables

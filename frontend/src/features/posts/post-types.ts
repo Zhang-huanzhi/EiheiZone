@@ -34,7 +34,7 @@ export type PostCreateInput = {
   image_ids?: string[];
 };
 
-export type PostUpdateInput = Partial<Pick<PostCreateInput, "title" | "body" | "visibility">>;
+export type PostUpdateInput = Partial<Pick<PostCreateInput, "title" | "body" | "visibility" | "image_ids">>;
 
 export type PostListParams = {
   offset?: number;

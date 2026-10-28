@@ -11,8 +11,8 @@ import app.modules.posts.image_service as image_service
 from app.modules.auth.models import UserRole
 from app.modules.auth.service import create_user
 from app.modules.posts.models import Post, PostImageStatus, PostVisibility
-from app.modules.posts.schemas import PostCreate
-from app.modules.posts.service import create_post, remove_post
+from app.modules.posts.schemas import PostCreate, PostUpdate
+from app.modules.posts.service import create_post, remove_post, update_post
 
 
 PASSWORD = "test-password-123"
@@ -111,3 +111,26 @@ def test_family_can_upload_and_attach_images(
     assert test_session.get(Post, post.id).author_id == family.id
     assert post.images[0].id == image.id
     assert image.owner_id == family.id
+
+
+def test_owner_can_replace_post_images_and_reorder(
+    test_session: Session,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(image_service, "get_settings", lambda: SimpleNamespace(media_root=tmp_path))
+    owner = create_owner(test_session)
+    first = image_service.upload_image(test_session, user=owner, upload=make_image_upload())
+    second = image_service.upload_image(test_session, user=owner, upload=make_image_upload(image_format="PNG"))
+    post = create_post(test_session, user=owner, payload=PostCreate(title="Edit images", body="Body", image_ids=[first.id, second.id]))
+    first_path = image_service.image_path(first)
+
+    updated = update_post(
+        test_session,
+        user=owner,
+        post_id=post.id,
+        payload=PostUpdate(image_ids=[second.id]),
+    )
+
+    assert [image.id for image in updated.images] == [second.id]
+    assert not first_path.exists()

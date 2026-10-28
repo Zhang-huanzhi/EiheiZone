@@ -168,3 +168,13 @@ docker compose up -d --wait
 `pg_restore` 只可用于新的空数据库；不得对已有生产数据库执行。完整恢复后检查 `/api/v1/health`、登录、家庭内容和 Post 图片，再记录备份时间与验证结果。恢复演练应使用与生产隔离的 Compose 项目、数据库和 media volume；确认当前应用的 Alembic migration 可从备份状态升级。应用启动会自动执行 `alembic upgrade head`，不兼容 Migration 必须先制定单独恢复方案。
 
 不得提交 `.env`、SSH 私钥、PEM、`signing.keystore`、签名密码、数据库备份、媒体卷副本或真实家庭数据。公开文档只记录管理原则、非敏感路径和验证结果。
+
+### 媒体清理任务
+
+生产 Compose 运行 `media-cleanup-worker`，默认每 7 天扫描超过 24 小时的 pending 图片、cleanup_pending 图片和媒体目录中的孤立文件。清理失败会记录在 `media_cleanup_runs`，并通过现有微信通知发送给活跃 Owner（当前为 `zzk`）。手工检查可运行：
+
+```bash
+docker compose run --rm --no-deps backend python scripts/cleanup_post_images.py --dry-run --scan-orphans
+docker compose run --rm --no-deps backend python scripts/cleanup_post_images.py --scan-orphans --max-items 1000
+docker compose logs --tail=100 media-cleanup-worker
+```

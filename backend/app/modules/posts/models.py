@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, Enum as SqlEnum, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum as SqlEnum, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -148,6 +148,9 @@ class PostImage(Base):
         onupdate=utc_now,
         server_default=text("CURRENT_TIMESTAMP"),
     )
+    cleanup_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    last_cleanup_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_cleanup_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     post: Mapped[Post | None] = relationship("Post", back_populates="images")
     owner: Mapped[object] = relationship("User")
@@ -155,6 +158,29 @@ class PostImage(Base):
     @property
     def url(self) -> str:
         return f"/api/v1/media/images/{self.id}"
+
+
+class MediaCleanupRun(Base):
+    """Persist one media cleanup pass for operations and worker health checks."""
+
+    __tablename__ = "media_cleanup_runs"
+    __table_args__ = (Index("ix_media_cleanup_runs_finished_at", text("finished_at DESC")),)
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, server_default=text("CURRENT_TIMESTAMP")
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    dry_run: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    scan_orphans: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    status: Mapped[str] = mapped_column(String(20), default="running", server_default=text("'running'"))
+    pending_candidates: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    orphan_candidates: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    files_deleted: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    records_deleted: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    failed_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    error_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class PostComment(Base):

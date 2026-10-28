@@ -20,6 +20,7 @@ EVENT_TITLES = {
     "post_created": "有新的家庭近况",
     "qa_created": "有新的家庭问题",
     "qa_answered": "你的问题有新回复",
+    "media_cleanup_failed": "图片清理失败",
 }
 
 
