@@ -12,6 +12,7 @@ readonly HEALTHCHECK_RESOLVE="eihei.zone:443:127.0.0.1"
 previous_stable=""
 target_commit=""
 old_previous=""
+failure_log=""
 
 log() {
   printf '[%s] %s\n' "$(date --iso-8601=seconds)" "$*"
@@ -20,7 +21,25 @@ log() {
 on_error() {
   local line="$1"
   local status="$2"
+  if [[ -z "${failure_log}" ]]; then
+    mkdir -p "${STATE_DIR}" 2>/dev/null || true
+    failure_log="${STATE_DIR}/failure-$(date +%Y%m%dT%H%M%S)-$$.log"
+  fi
+  {
+    printf '[%s] Deployment failed at line %s with status %s.\n' "$(date --iso-8601=seconds)" "${line}" "${status}"
+    printf '%s\n' '--- git status ---'
+    git -C "${PROJECT_DIR}" status --short 2>&1 || true
+    printf '%s\n' '--- git diff summary ---'
+    git -C "${PROJECT_DIR}" diff --stat 2>&1 || true
+    printf '%s\n' '--- compose ps ---'
+    docker compose -f "${PROJECT_DIR}/docker-compose.yml" ps 2>&1 || true
+    printf '%s\n' '--- alembic current ---'
+    docker compose -f "${PROJECT_DIR}/docker-compose.yml" exec -T backend alembic current 2>&1 || true
+    printf '%s\n' '--- recent service logs ---'
+    docker compose -f "${PROJECT_DIR}/docker-compose.yml" logs --tail=100 backend frontend notification-worker media-cleanup-worker 2>&1 || true
+  } >"${failure_log}" 2>&1 || true
   log "Deployment failed at line ${line} with status ${status}."
+  log "Failure diagnostics saved to ${failure_log}."
   if [[ -n "${previous_stable}" ]]; then
     log "Rollback command: bash ${PROJECT_DIR}/rollback.sh ${previous_stable}"
   fi
@@ -57,6 +76,12 @@ cd "${PROJECT_DIR}"
 
 git diff --quiet && git diff --cached --quiet || {
   log "Tracked files have local changes; refusing to deploy."
+  log "Tracked working tree status:"
+  git status --short
+  log "Unstaged diff summary:"
+  git diff --stat
+  log "Staged diff summary:"
+  git diff --cached --stat
   exit 1
 }
 

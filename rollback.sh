@@ -13,6 +13,10 @@ log() {
   printf '[%s] %s\n' "$(date --iso-8601=seconds)" "$*"
 }
 
+extract_revision() {
+  grep -oE '[0-9a-f]{12,40}' | head -n 1
+}
+
 health_check() {
   local attempt
   for attempt in {1..12}; do
@@ -83,6 +87,12 @@ else
   current_stable="$(git rev-parse HEAD)"
 fi
 
+current_schema_revision="$(docker compose exec -T backend alembic current 2>/dev/null | extract_revision || true)"
+[[ -n "${current_schema_revision}" ]] || {
+  log "Unable to determine the current database migration; refusing rollback."
+  exit 1
+}
+
 log "Rolling back from ${current_stable} to ${rollback_commit}."
 git checkout --detach "${rollback_commit}"
 export DEPLOY_IMAGE_TAG="${rollback_commit}"
@@ -92,6 +102,19 @@ if ! docker image inspect \
   "eiheizone-frontend:${rollback_commit}" >/dev/null 2>&1; then
   log "Stable images are unavailable; rebuilding the requested commit."
   docker compose build backend frontend
+fi
+
+target_schema_revision="$(docker compose run --rm --no-deps backend alembic heads 2>/dev/null | extract_revision || true)"
+if [[ -z "${target_schema_revision}" ]]; then
+  log "Unable to determine the target migration head; restoring the current commit and refusing rollback."
+  git checkout --detach "${current_stable}"
+  exit 1
+fi
+if [[ "${current_schema_revision}" != "${target_schema_revision}" ]]; then
+  log "Database migration ${current_schema_revision} differs from target head ${target_schema_revision}."
+  log "Rollback will not reverse migrations; restore the current commit and perform a compatibility review first."
+  git checkout --detach "${current_stable}"
+  exit 1
 fi
 docker compose up -d --no-build --remove-orphans --wait --wait-timeout 180
 

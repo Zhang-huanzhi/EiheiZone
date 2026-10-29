@@ -16,3 +16,4 @@ v1.4 的功能或相关变更应分别建立迭代文档，记录目标、范围
 - [V1.4 / 005 微信已绑定时禁止生成绑定码](005-wechat-bound-code.md)（Accepted，2026-10-18）
 - [V1.4 / 006 COS 基础数据防灾](006-basic-disaster-recovery.md)（In Progress，2026-10-22）
 - [V1.4 / 007 Post 图片编辑与媒体清理自动化](007-post-image-edit-cleanup.md)（Accepted，2026-10-28）
+- [V1.4 / 008 生产部署阻断恢复与发布链路硬化](008-production-deploy-recovery.md)（In Progress，2026-10-29）
