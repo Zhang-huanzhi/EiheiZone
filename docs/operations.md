@@ -40,6 +40,10 @@ bash /opt/eiheizone/deploy.sh
 /opt/eiheizone/.deploy/previous-successful-commit
 ```
 
+生产目录中的 Git 跟踪文件必须保持干净。不要直接在服务器上修改脚本、Compose 或应用源代码；运维修复应先提交到 GitHub `main`，再由部署脚本发布。若部署因脏工作区拒绝，脚本会输出 `git status --short` 以及暂存、未暂存差异摘要。先保存并审阅服务器差异，确认没有未纳入版本控制的业务改动后，才可以恢复到 `origin/main` 并重试部署。
+
+部署失败时，脚本会把工作树状态、Compose 状态、当前 Alembic migration 和最近容器日志写入 `/opt/eiheizone/.deploy/failure-*.log`。该文件只用于故障排查，包含生产日志，排查完成后按服务器日志保留策略处理。
+
 ## 3. 发布检查
 
 1. Pull Request required checks 全部成功并合并到 `main`；
@@ -82,13 +86,15 @@ bash /opt/eiheizone/rollback.sh <40-character-commit-sha>
 
 部署与回滚共享 `/opt/eiheizone/.deploy/deploy.lock`。回滚优先复用目标 SHA 的镜像，并重新执行 Compose 和公网健康检查；它不会逆向执行 Alembic Migration，也不会删除 named volumes。数据库不兼容时必须人工评估，不能只依赖应用镜像回滚。
 
+回滚脚本会先读取当前数据库 migration 和目标提交镜像中的 migration head；两者不一致或无法读取时，脚本会恢复当前提交并拒绝回滚。这样可以避免应用代码回退后访问更新的数据库结构。需要跨 migration 回滚时，必须先完成备份、兼容性评审和单独的数据恢复方案。
+
 ## 6. Post 图片维护
 
 图片文件只能通过 FastAPI 鉴权接口读取，不直接公开 `media_data`。删除 Post 时会删除图片记录并尝试删除物理文件；上传超过 24 小时仍未绑定的 `pending` 图片，以及此前删除失败的 `cleanup_pending` 图片，按需执行：
 
 ```bash
 cd /opt/eiheizone
-sudo docker compose exec backend python scripts/cleanup_post_images.py
+sudo docker compose exec backend env PYTHONPATH=/app python scripts/cleanup_post_images.py
 ```
 
 脚本不会清理已经绑定的 `attached` 图片。运行后记录删除数量，并抽查 Post 图片仍可访问；在没有独立媒体备份前，不直接进入 volume 手工批量删除文件。
@@ -174,7 +180,7 @@ docker compose up -d --wait
 生产 Compose 运行 `media-cleanup-worker`，默认每 7 天扫描超过 24 小时的 pending 图片、cleanup_pending 图片和媒体目录中的孤立文件。清理失败会记录在 `media_cleanup_runs`，并通过现有微信通知发送给活跃 Owner（当前为 `zzk`）。手工检查可运行：
 
 ```bash
-docker compose run --rm --no-deps backend python scripts/cleanup_post_images.py --dry-run --scan-orphans
-docker compose run --rm --no-deps backend python scripts/cleanup_post_images.py --scan-orphans --max-items 1000
+docker compose run --rm --no-deps backend env PYTHONPATH=/app python scripts/cleanup_post_images.py --dry-run --scan-orphans
+docker compose run --rm --no-deps backend env PYTHONPATH=/app python scripts/cleanup_post_images.py --scan-orphans --max-items 1000
 docker compose logs --tail=100 media-cleanup-worker
 ```
