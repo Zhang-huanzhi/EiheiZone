@@ -28,6 +28,14 @@ def test_development_auth_defaults_are_local_safe() -> None:
     assert settings.csrf_cookie_name == "pfp_csrf"
 
 
+def test_media_cleanup_defaults_to_weekly_low_frequency_runs() -> None:
+    settings = make_settings()
+
+    assert settings.media_cleanup_worker_interval_seconds == 7 * 24 * 60 * 60
+    assert settings.media_cleanup_orphan_grace_hours == 24
+    assert settings.media_cleanup_max_items == 1000
+
+
 def test_missing_csrf_secret_is_rejected_at_startup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

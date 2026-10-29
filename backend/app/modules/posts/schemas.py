@@ -68,6 +68,7 @@ class PostUpdate(BaseModel):
     title: str | None = None
     body: str | None = None
     visibility: PostVisibility | None = None
+    image_ids: list[UUID] | None = Field(default=None, max_length=MAX_IMAGES)
 
     @field_validator("title")
     @classmethod
@@ -81,7 +82,7 @@ class PostUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_supplied_fields(self) -> "PostUpdate":
-        allowed_fields = {"title", "body", "visibility"}
+        allowed_fields = {"title", "body", "visibility", "image_ids"}
         supplied_fields = self.model_fields_set & allowed_fields
         if not supplied_fields:
             raise ValueError("At least one Post field must be supplied")

@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     wechat_template_id: str | None = None
     notification_worker_interval_seconds: int = 10
     notification_max_attempts: int = 5
+    media_cleanup_worker_interval_seconds: int = 7 * 24 * 60 * 60
+    media_cleanup_orphan_grace_hours: int = 24
+    media_cleanup_max_items: int = 1000
     # Docker resolves this to /app/media; local development uses backend/media.
     media_root: Path = BACKEND_DIRECTORY / "media"
 
@@ -103,7 +106,13 @@ class Settings(BaseSettings):
             raise ValueError(message)
         return value
 
-    @field_validator("notification_worker_interval_seconds", "notification_max_attempts")
+    @field_validator(
+        "notification_worker_interval_seconds",
+        "notification_max_attempts",
+        "media_cleanup_worker_interval_seconds",
+        "media_cleanup_orphan_grace_hours",
+        "media_cleanup_max_items",
+    )
     @classmethod
     def validate_notification_positive(cls, value: int) -> int:
         if value <= 0:

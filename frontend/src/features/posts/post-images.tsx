@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { PostImageRecord } from "@/features/posts/post-types";
 
@@ -8,6 +8,47 @@ type PostImagesProps = {
   images?: PostImageRecord[];
   interactive?: boolean;
 };
+
+export type EditablePostImage = PostImageRecord & { file?: File };
+
+type PostImageEditorProps = {
+  images: EditablePostImage[];
+  onMove: (from: number, to: number) => void;
+  onRemove: (index: number) => void;
+};
+
+export function PostImageEditor({ images, onMove, onRemove }: PostImageEditorProps) {
+  const draggedIndex = useRef<number | null>(null);
+  if (images.length === 0) return null;
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {images.map((image, index) => (
+        <div
+          className="space-y-2"
+          draggable
+          key={image.id}
+          onDragEnd={() => { draggedIndex.current = null; }}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={() => {
+            if (draggedIndex.current !== null && draggedIndex.current !== index) onMove(draggedIndex.current, index);
+            draggedIndex.current = null;
+          }}
+          onDragStart={() => { draggedIndex.current = index; }}
+        >
+          <div className="relative aspect-square overflow-hidden rounded-md bg-muted">
+            <PostImage image={image} />
+            <span className="absolute left-1 top-1 rounded bg-black/70 px-1.5 text-xs text-white">{index + 1}</span>
+          </div>
+          <div className="flex items-center justify-between gap-1">
+            <button aria-label={`第 ${index + 1} 张图片上移`} className="rounded border px-2 py-1 text-xs disabled:opacity-40" disabled={index === 0} onClick={() => onMove(index, index - 1)} type="button">上移</button>
+            <button aria-label={`第 ${index + 1} 张图片下移`} className="rounded border px-2 py-1 text-xs disabled:opacity-40" disabled={index === images.length - 1} onClick={() => onMove(index, index + 1)} type="button">下移</button>
+            <button aria-label={`删除第 ${index + 1} 张图片`} className="rounded border border-destructive/40 px-2 py-1 text-xs text-destructive" onClick={() => onRemove(index)} type="button">删除</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function PostImages({ images = [], interactive = true }: PostImagesProps) {
   const [active, setActive] = useState<number | null>(null);

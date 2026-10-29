@@ -1,5 +1,6 @@
 """Image storage, validation, processing, and access rules for Posts."""
 
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
@@ -13,7 +14,8 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.modules.auth.models import User, UserRole
-from app.modules.posts.models import Post, PostImage, PostImageStatus, PostVisibility
+from app.modules.notifications.service import enqueue_media_cleanup_failure
+from app.modules.posts.models import MediaCleanupRun, Post, PostImage, PostImageStatus, PostVisibility
 
 MAX_IMAGES = 9
 MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -21,6 +23,21 @@ MAX_LONG_EDGE = 4096
 MAX_PIXELS = 16 * 1024 * 1024
 MAX_TOTAL_SIZE = 30 * 1024 * 1024
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
+ORPHAN_GRACE = timedelta(hours=24)
+
+
+@dataclass
+class CleanupStats:
+    scanned_files: int = 0
+    pending_candidates: int = 0
+    orphan_candidates: int = 0
+    files_deleted: int = 0
+    records_deleted: int = 0
+    retry_count: int = 0
+    failed_count: int = 0
+
+    def as_dict(self) -> dict[str, int]:
+        return asdict(self)
 
 
 def upload_image(db: Session, *, user: User, upload: UploadFile) -> PostImage:
@@ -128,6 +145,49 @@ def attach_images(db: Session, *, user: User, post: Post, image_ids: list[UUID])
         image.status = PostImageStatus.ATTACHED
 
 
+def replace_post_images(
+    db: Session,
+    *,
+    user: User,
+    post: Post,
+    image_ids: list[UUID],
+) -> list[PostImage]:
+    """Replace a Post's ordered image list and return detached images for cleanup."""
+
+    if len(image_ids) > MAX_IMAGES or len(set(image_ids)) != len(image_ids):
+        raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message="A Post may contain at most 9 unique images")
+    current = {image.id: image for image in post.images if image.status is PostImageStatus.ATTACHED}
+    if not image_ids and not current:
+        return []
+    requested = list(
+        db.scalars(
+            select(PostImage).where(
+                PostImage.id.in_(image_ids),
+                (PostImage.status == PostImageStatus.PENDING)
+                | ((PostImage.status == PostImageStatus.ATTACHED) & (PostImage.post_id == post.id)),
+            )
+        )
+    ) if image_ids else []
+    if len(requested) != len(image_ids):
+        raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message="One or more images are unavailable")
+    by_id = {image.id: image for image in requested}
+    for image in requested:
+        if image.status is PostImageStatus.PENDING and image.owner_id != user.id:
+            raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message="One or more images are unavailable")
+    if sum(image.file_size for image in requested) > MAX_TOTAL_SIZE:
+        raise AppError(status_code=400, code="IMAGE_TOTAL_TOO_LARGE", message="Post images must total 30 MB or less")
+    detached = [image for image_id, image in current.items() if image_id not in by_id]
+    for image in detached:
+        image.post = None
+        image.status = PostImageStatus.CLEANUP_PENDING
+    for position, image_id in enumerate(image_ids):
+        image = by_id[image_id]
+        image.post = post
+        image.position = position
+        image.status = PostImageStatus.ATTACHED
+    return detached
+
+
 def get_image_for_reader(db: Session, *, image_id: UUID, user: User | None) -> PostImage | None:
     """Return an attached image only when its Post is visible to the reader."""
 
@@ -165,31 +225,115 @@ def delete_detached_images(db: Session, images: list[PostImage]) -> None:
             db.delete(image)
         except OSError:
             image.status = PostImageStatus.CLEANUP_PENDING
+            image.cleanup_attempts += 1
+            image.last_cleanup_at = datetime.now(UTC)
+            image.last_cleanup_error = "physical file deletion failed"
     db.commit()
 
 
-def cleanup_orphan_images(db: Session) -> int:
-    """Delete pending uploads older than 24 hours and retry failed cleanups."""
+def cleanup_orphan_images(
+    db: Session,
+    *,
+    dry_run: bool = False,
+    scan_orphans: bool = False,
+    max_items: int | None = None,
+    grace_period: timedelta = ORPHAN_GRACE,
+) -> CleanupStats:
+    """Clean stale database records and unreferenced media files with statistics."""
 
-    cutoff = datetime.now(UTC) - timedelta(hours=24)
+    if max_items is not None and max_items <= 0:
+        raise ValueError("max_items must be positive")
+    now = datetime.now(UTC)
+    cutoff = now - grace_period
+    stats = CleanupStats()
     images = list(
         db.scalars(
             select(PostImage).where(
                 (PostImage.status == PostImageStatus.CLEANUP_PENDING)
-                | (
-                    (PostImage.status == PostImageStatus.PENDING)
-                    & (PostImage.created_at < cutoff)
-                )
-            )
+                | ((PostImage.status == PostImageStatus.PENDING) & (PostImage.created_at < cutoff))
+            ).order_by(PostImage.created_at)
         )
     )
-    deleted = 0
-    for image in images:
-        try:
-            image_path(image).unlink(missing_ok=True)
-            db.delete(image)
-            deleted += 1
-        except OSError:
-            image.status = PostImageStatus.CLEANUP_PENDING
+    stats.pending_candidates = len(images)
+    known_keys = set(db.scalars(select(PostImage.storage_key)))
+    files: list[Path] = []
+    root = get_settings().media_root
+    if scan_orphans and root.exists():
+        files = [path for path in root.rglob("*") if path.is_file() and path.stat().st_mtime < cutoff.timestamp()]
+        stats.scanned_files = len(files)
+        files = [path for path in files if path.is_relative_to(root.resolve()) and path.relative_to(root).as_posix() not in known_keys]
+        stats.orphan_candidates = len(files)
+    candidates = [("image", image) for image in images] + [("file", path) for path in files]
+    if max_items is not None:
+        candidates = candidates[:max_items]
+    for kind, candidate in candidates:
+        if kind == "image":
+            image = candidate
+            if dry_run:
+                continue
+            try:
+                image_path(image).unlink(missing_ok=True)
+                db.delete(image)
+                stats.files_deleted += 1
+                stats.records_deleted += 1
+                if image.cleanup_attempts:
+                    stats.retry_count += 1
+            except OSError as error:
+                image.status = PostImageStatus.CLEANUP_PENDING
+                image.cleanup_attempts += 1
+                image.last_cleanup_at = now
+                image.last_cleanup_error = str(error)[:500]
+                stats.failed_count += 1
+        else:
+            path = candidate
+            if dry_run:
+                continue
+            try:
+                path.unlink()
+                stats.files_deleted += 1
+            except OSError:
+                stats.failed_count += 1
+    if not dry_run:
+        db.commit()
+    return stats
+
+
+def run_media_cleanup(
+    db: Session,
+    *,
+    dry_run: bool = False,
+    scan_orphans: bool = True,
+    max_items: int | None = None,
+) -> tuple[MediaCleanupRun | None, CleanupStats]:
+    """Run cleanup, persist an operational record, and enqueue Owner alerts on failure."""
+
+    if dry_run:
+        return None, cleanup_orphan_images(db, dry_run=True, scan_orphans=scan_orphans, max_items=max_items)
+    run = MediaCleanupRun(dry_run=False, scan_orphans=scan_orphans)
+    db.add(run)
     db.commit()
-    return deleted
+    try:
+        stats = cleanup_orphan_images(db, scan_orphans=scan_orphans, max_items=max_items)
+        run.finished_at = datetime.now(UTC)
+        run.status = "failed" if stats.failed_count else "succeeded"
+        run.pending_candidates = stats.pending_candidates
+        run.orphan_candidates = stats.orphan_candidates
+        run.files_deleted = stats.files_deleted
+        run.records_deleted = stats.records_deleted
+        run.retry_count = stats.retry_count
+        run.failed_count = stats.failed_count
+        if stats.failed_count:
+            run.error_summary = f"{stats.failed_count} media cleanup item(s) failed"
+            enqueue_media_cleanup_failure(db, run_id=run.id, summary=run.error_summary)
+        db.commit()
+    except Exception as error:
+        db.rollback()
+        run = db.get(MediaCleanupRun, run.id) or run
+        run.finished_at = datetime.now(UTC)
+        run.status = "failed"
+        run.error_summary = str(error)[:1000]
+        db.add(run)
+        enqueue_media_cleanup_failure(db, run_id=run.id, summary=run.error_summary)
+        db.commit()
+        raise
+    return run, stats

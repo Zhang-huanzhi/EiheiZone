@@ -5,8 +5,9 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { createPost, updatePost, uploadPostImage } from "@/features/posts/post-api";
-import { PostImages } from "@/features/posts/post-images";
+import { PostImageEditor, type EditablePostImage } from "@/features/posts/post-images";
 import type { PostRecord, PostVisibility } from "@/features/posts/post-types";
+import type { PostUpdateInput } from "@/features/posts/post-types";
 import { ApiRequestError } from "@/lib/api/client";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -32,17 +33,19 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [selectedPreviewUrls, setSelectedPreviewUrls] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [draftImages, setDraftImages] = useState<EditablePostImage[]>(() =>
+    (initialPost?.images ?? []).map((image) => ({ ...image })),
+  );
+  const draftImagesRef = useRef(draftImages);
 
   const isEditing = initialPost !== undefined;
 
   useEffect(() => {
-    return () => {
-      selectedPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [selectedPreviewUrls]);
+    draftImagesRef.current = draftImages;
+  }, [draftImages]);
+  useEffect(() => () => {
+    draftImagesRef.current.filter((image) => image.file).forEach((image) => URL.revokeObjectURL(image.url));
+  }, []);
 
   function validate(): FieldErrors {
     const errors: FieldErrors = {};
@@ -74,22 +77,32 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
 
     const input = { title: title.trim(), body, visibility };
     if (initialPost) {
-      const changed = Object.fromEntries(
+      const originalImageIds = (initialPost.images ?? []).map((image) => image.id);
+      const changed: PostUpdateInput = Object.fromEntries(
         Object.entries(input).filter(([key, value]) => initialPost[key as keyof typeof input] !== value),
       );
-      if (Object.keys(changed).length === 0) {
+      const hasNewImages = draftImages.some((image) => image.file);
+      const imageOrderChanged = draftImages.filter((image) => !image.file).map((image) => image.id).join(",") !== originalImageIds.join(",")
+        || hasNewImages;
+      if (!imageOrderChanged && Object.keys(changed).length === 0) {
         setFormError("没有需要保存的修改。 ");
         return;
       }
       setIsSubmitting(true);
-      await submit(() => updatePost(initialPost.id, changed));
+      await submit(async () => {
+        const uploadedIds = await uploadSelectedImages(draftImages.filter((image) => image.file).map((image) => image.file!));
+        let uploadedIndex = 0;
+        const imageIds = draftImages.map((image) => image.file ? uploadedIds[uploadedIndex++] : image.id);
+        if (imageOrderChanged) changed.image_ids = imageIds;
+        return updatePost(initialPost.id, changed);
+      });
       return;
     }
 
     setIsSubmitting(true);
     await submit(async () => {
-      const imageIds = await uploadSelectedImages(selectedFiles);
-      return createPost(imageIds.length ? { ...input, image_ids: imageIds } : input);
+      const uploadedIds = await uploadSelectedImages(draftImages.filter((image) => image.file).map((image) => image.file!));
+      return createPost(uploadedIds.length ? { ...input, image_ids: uploadedIds } : input);
     });
   }
 
@@ -139,18 +152,16 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
         />
         {fieldErrors.title ? <p className="text-sm text-destructive" id="post-title-error">{fieldErrors.title}</p> : null}
       </div>
-      {!isEditing ? (
-        <div className="space-y-2">
+      <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="post-images">图片（最多 9 张）</label>
           <input
-            ref={fileInputRef}
             accept="image/jpeg,image/png,image/webp"
             className="block w-full text-sm"
             id="post-images"
             multiple
             onChange={(event) => {
               const files = Array.from(event.target.files ?? []);
-              if (files.length > MAX_IMAGES) {
+              if (draftImages.length + files.length > MAX_IMAGES) {
                 setFormError("最多选择 9 张图片。");
                 return;
               }
@@ -160,35 +171,27 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
                 return;
               }
               setFormError(null);
-              selectedPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
-              setSelectedFiles(files);
-              setSelectedPreviewUrls(files.map((file) => URL.createObjectURL(file)));
+              setDraftImages((current) => [
+                ...current,
+                ...files.map((file, index) => ({
+                  id: `selected-${Date.now()}-${index}`,
+                  url: URL.createObjectURL(file),
+                  position: current.length + index,
+                  width: 1,
+                  height: 1,
+                  file,
+                })),
+              ]);
             }}
             type="file"
           />
-          {selectedFiles.length ? (
+          {draftImages.length ? (
             <>
-              <p className="text-sm text-muted-foreground">已选择 {selectedFiles.length} 张图片</p>
-              <PostImages
-                images={selectedPreviewUrls.map((url, index) => ({
-                  id: `selected-${index}`,
-                  url,
-                  position: index,
-                  width: 1,
-                  height: 1,
-                }))}
-              />
+              <p className="text-sm text-muted-foreground">当前共有 {draftImages.length} 张图片，可调整顺序或删除。</p>
+              <PostImageEditor images={draftImages} onMove={moveImage} onRemove={removeImage} />
             </>
           ) : null}
-        </div>
-      ) : null}
-      {isEditing && initialPost.images?.length ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">已发布图片</p>
-          <PostImages images={initialPost.images} interactive={false} />
-          <p className="text-xs text-muted-foreground">本次迭代暂不支持修改已发布图片。</p>
-        </div>
-      ) : null}
+      </div>
       <div className="space-y-2">
         <label className="text-sm font-medium" htmlFor="post-body">
           正文
@@ -224,6 +227,23 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
       </Button>
     </form>
   );
+
+  function moveImage(from: number, to: number) {
+    setDraftImages((current) => {
+      const next = [...current];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next.map((image, position) => ({ ...image, position }));
+    });
+  }
+
+  function removeImage(index: number) {
+    setDraftImages((current) => {
+      const removed = current[index];
+      if (removed?.file) URL.revokeObjectURL(removed.url);
+      return current.filter((_, itemIndex) => itemIndex !== index).map((image, position) => ({ ...image, position }));
+    });
+  }
 }
 
 async function uploadSelectedImages(files: File[]): Promise<string[]> {

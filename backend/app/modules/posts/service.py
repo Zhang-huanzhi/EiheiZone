@@ -9,7 +9,7 @@ from app.core.errors import AppError
 from app.core.pagination import Page, PaginationParams
 from app.modules.auth.models import User, UserRole
 from app.modules.posts.models import Post, PostComment, PostImageStatus
-from app.modules.posts.image_service import attach_images, delete_detached_images
+from app.modules.posts.image_service import attach_images, delete_detached_images, replace_post_images
 from app.modules.posts.repository import (
     add_comment,
     add_post,
@@ -98,9 +98,14 @@ def update_post(
     if post is None:
         raise _post_not_found()
 
-    for field_name, value in payload.model_dump(exclude_unset=True).items():
+    values = payload.model_dump(exclude_unset=True)
+    image_ids = values.pop("image_ids", None)
+    for field_name, value in values.items():
         setattr(post, field_name, value)
+    detached = replace_post_images(db, user=user, post=post, image_ids=image_ids) if image_ids is not None else []
     _commit_and_refresh(db, post)
+    if detached:
+        delete_detached_images(db, detached)
     return _to_response(post)
 
 
