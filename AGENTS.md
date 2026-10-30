@@ -6,6 +6,14 @@
 - Explain the scope before making modifications, and report the actual results and unverified items upon completion.
 - When the user only asks for an explanation, diagnosis, or review, do not modify files.
 
+## Planning
+
+Before writing an implementation plan or editing code for an iteration, decide whether the approach is only a local choice or a lasting technical decision.
+
+- Create `docs/adr/NNNN-kebab-title.md` in the same change when the choice affects more than one module, deployment, a security or data boundary, or would have to be made again by a later iteration. Link the ADR from the iteration document. Start it as `Proposed`, and mark it `Accepted` when the iteration is accepted.
+- Keep a choice that stays inside one feature in the iteration document, using prose or a short options table. Do not open an ADR for a local layout, query, or UI decision, and do not use a weighted decision matrix.
+- Do not add a parallel `.cursor/rules` file. This file is the instruction to follow while planning.
+
 ## Project Structure & Module Organization
 
 The deployable application is split into `backend/` and `frontend/`. FastAPI code lives in `backend/app/`; shared configuration, security, errors, and database setup belong in `core/` and `db/`. Business features live in `modules/` and follow `router -> service -> repository`. Backend tests mirror these domains under `backend/tests/`, and Alembic revisions are stored in `backend/alembic/versions/`.
@@ -58,21 +66,28 @@ Name Pytest files `test_*.py`, Vitest files `*.test.ts(x)`, and Playwright files
 
 Use Conventional Commits, for example `feat(posts): add image support`, `fix(auth): reject expired sessions`, or `docs: update iteration workflow`. Keep `main` releasable. Pull requests should summarize behavior, link the issue or iteration document, identify migration or configuration impact, list checks run, and include screenshots for visible UI changes.
 
+### Branch, iteration, and PR naming
+
+- One iteration uses one short-lived branch from the latest `main`.
+- Branch names use `<type>/v<version>-<iteration-id>-<kebab-topic>`; allowed types are `feat`, `fix`, `docs`, `test`, `ops`, and `refactor`. Example: `docs/v1.5.1-001-documentation-standardization`.
+- Iteration files use `docs/iterations/<version>/NNN-kebab-topic.md` and follow the lightweight template in `docs/iterations/_template.md` (status values: `In Progress`, `Accepted`, `Deferred`; keep optional sections only when applicable).
+- PR titles use `<type>(<scope>): <summary> [v<version>-<id>]`. The PR body links the iteration and summarizes scope, migration/configuration/deployment impact, checks run, and remaining risks.
+- When an iteration has two or more real implementation options, record the options and the reason for the choice in prose or a short table. Do not require a weighted decision matrix. Follow the Planning section above when the choice needs an ADR.
+
 ## Git
 
-Git commands are allowed in this repository. Use them carefully:
+Git commands are allowed in this repository. Branch names follow the section above. Use Git carefully:
 
-- One feature or iteration uses one short-lived branch cut from the latest `main`. Name it with `feat/`, `fix/`, or `docs/`, matching the iteration document, for example `docs/v1.4-002-cursor-handoff`.
-- Continue later edits on that same branch. Do not open another branch for the same feature, and do not split one change across several branches.
+- Later edits stay on that same branch. Do not open another branch for the same feature, and do not split one change across several branches.
 - After that branch is merged, start the next piece of work from `main` on one new branch.
-- Status, diff, and log are fine. Commit, push, open a Pull Request, or merge only when the user explicitly asks.
+- Status, diff, and log are fine. Commit, push, open a Pull Request, merge, or create a product tag only when the user explicitly asks.
 - The author and committer of every commit are Zhang Huanzhi `<zhanghuanzhi520@gmail.com>`. Do not add a `Co-authored-by` trailer for Cursor or any other agent.
 - Do not force-push, hard-reset, or rewrite published history unless the user explicitly asks.
 - Do not initialize, commit, or push the parent `EiheiZone` directory or `notes/` unless the user explicitly asks.
 
 ## Security & Documentation
 
-Never commit `.env` files, credentials, real family data, database dumps, SSH or signing keys, or generated private artifacts. Do not rewrite frozen V1 history for new behavior; record new work in the relevant iteration document and use an ADR only for durable cross-module decisions.
+Never commit `.env` files, credentials, real family data, database dumps, SSH or signing keys, or generated private artifacts. Do not rewrite frozen records in `docs/versions/` for new behavior; record new work in `docs/iterations/`.
 
 ## Local Server Access
 

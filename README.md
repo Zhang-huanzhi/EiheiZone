@@ -4,12 +4,12 @@ English | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 EiheiZone is a private family information portal for sharing life updates, answering family questions, and recording significant expenses. It combines a public-facing feed with role-protected family and owner workspaces in one responsive web application.
 
-**Current version:** v1.1.0, accepted for release on August 15, 2026. The Git tag is created after the release commit is merged and production verification succeeds.
+**Current version:** v1.5.1, a documentation and release-process standardization iteration after v1.4 closure. Product tags are created only after the release commit is merged and production verification succeeds.
 
 **Production site:** [https://eihei.zone](https://eihei.zone)
 
 <p align="center">
-  <img src="frontend/public/screenshots/login-mobile.png" alt="EiheiZone mobile login screen" width="280">
+  <img src="docs/_附件_/owner-workspace.png" alt="EiheiZone Owner workspace after sign-in" width="860">
 </p>
 
 > The application interface is in Simplified Chinese. The English, Chinese, and Japanese options above are README translations, not application localization.
@@ -17,13 +17,13 @@ EiheiZone is a private family information portal for sharing life updates, answe
 ## Features
 
 - **Role-based access:** separate Public, Family, and Owner experiences, enforced by the backend.
-- **Posts:** Family and Owner users can publish text or image updates with `public` or `family` visibility; the Owner manages all Posts.
+- **Posts:** Family and Owner users can publish text or image updates with `public` or `family` visibility; logged-in users can post flat text comments, and comment authors or the Owner can delete them; the Owner manages all Posts.
 - **Post images:** up to nine permission-checked images per Post, normalized to WebP and stored in a persistent media volume.
 - **Family Q&A:** Family and Owner users can ask questions in their own workspace; the Owner can answer them, with answer times visible in lists.
 - **Significant expenses:** private family records with exact decimal amounts and ISO 4217 currency codes.
 - **Dashboard:** recent Posts, Q&A, and expenses aggregated without a separate dashboard table.
 - **Installable experience:** responsive web UI, PWA manifest, and production HTTPS deployment.
-- **Operational tooling:** Alembic migrations, account and media maintenance scripts, required CI checks, automatic SSH deployment, health checks, and commit-based rollback.
+- **Operational tooling:** Alembic migrations, account and media maintenance scripts, notification and media-cleanup workers, required CI checks, automatic SSH deployment, health checks, and commit-based rollback.
 
 ## Roles and permissions
 
@@ -87,7 +87,7 @@ eiheizone/
 `-- deploy.env.example
 ```
 
-Formal project documentation: [`docs/README.md`](docs/README.md). Release archives are in [`docs/versions/`](docs/versions/), including [`v1.1.0`](docs/versions/v1.1/); active work is recorded in [`docs/iterations/`](docs/iterations/).
+Formal project documentation: [`docs/README.md`](docs/README.md). Release archives are in [`docs/versions/`](docs/versions/), including [`v1.4`](docs/versions/v1.4/); active work is recorded in [`docs/iterations/v1.5/`](docs/iterations/v1.5/). Deferred work is listed in [`docs/iterations/backlog/`](docs/iterations/backlog/).
 
 ## Local setup
 
@@ -207,11 +207,11 @@ Production runs PostgreSQL 17, FastAPI, Next.js, and Caddy on one Docker Compose
 
 The server keeps its production `.env`, deployment state, database, and media volume outside Git. `rollback.sh` restores the previous stable commit without deleting volumes or reversing Alembic migrations. See [`docs/operations.md`](docs/operations.md) for setup, rollback, media cleanup, backup, and recovery boundaries.
 
-## v1.1 boundaries and known risks
+## Current boundaries and known risks
 
 - The application UI is Chinese-only and requires a network connection; there is no offline family-data cache.
-- The application excludes registration, invitations, self-service password recovery, general file attachments beyond Post images, threaded comment replies, chat, search, AI, and complete accounting/reporting.
-- Published Post images cannot yet be added, removed, or reordered; orphan image cleanup is a manual maintenance action.
-- PostgreSQL and Post images are persisted in Docker named volumes. Off-host encrypted backup and recovery testing are deferred, so host loss can cause permanent data loss.
+- The application excludes registration, invitations, self-service password recovery, general file attachments beyond Post images, threaded comment replies, real-time chat, search, AI, and complete accounting/reporting.
+- The Owner can add, remove, and reorder images on published Posts; expired or orphaned media files are cleaned up periodically by `media-cleanup-worker` or via the maintenance script.
+- PostgreSQL and Post images are persisted in Docker named volumes. The encrypted COS backup script and isolated restore drill are verified, but daily cron scheduling and automated alerting remain deferred (`Deferred`), so host loss can still lose recent changes.
 - Re-run dependency audits and the full regression suite before broader deployment.
 - This repository does not contain production secrets, real family data, Android signing keys, or distributable Android packages.

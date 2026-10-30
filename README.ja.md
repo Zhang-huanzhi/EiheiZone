@@ -4,12 +4,12 @@
 
 EiheiZone は、日々の近況共有、家族からの質問への回答、まとまった支出の記録を行うためのプライベートな家族向け情報ポータルです。公開コンテンツ、家族専用エリア、Owner 管理エリアを、1 つのレスポンシブ Web アプリケーションとして提供します。
 
-**現在のバージョン：** v1.1.0。2026 年 8 月 15 日にリリース受け入れが完了しました。対応する Git tag は、リリースコミットのマージと本番検証の成功後に作成します。
+**現在のバージョン：** v1.5.1。v1.4 のクローズと、ドキュメント・ブランチ・PR・リリース手順の標準化を行う版です。Git tag はリリースコミットのマージと本番検証の成功後に作成します。
 
 **本番サイト：** [https://eihei.zone](https://eihei.zone)
 
 <p align="center">
-  <img src="frontend/public/screenshots/login-mobile.png" alt="EiheiZone のモバイルログイン画面" width="280">
+  <img src="docs/_附件_/owner-workspace.png" alt="ログイン後の EiheiZone Owner ワークスペース" width="860">
 </p>
 
 > アプリケーション UI は簡体字中国語です。上記の英語、中国語、日本語は README の翻訳であり、アプリケーションの多言語対応を示すものではありません。
@@ -17,13 +17,13 @@ EiheiZone は、日々の近況共有、家族からの質問への回答、ま�
 ## 機能
 
 - **ロールベースのアクセス制御：** Public、Family、Owner ごとに異なる画面を提供し、バックエンドで権限を強制します。
-- **Post：** Family と Owner がテキストまたは画像付きの近況を投稿し、公開範囲を `public` または `family` に設定できます。Owner はすべての Post を管理します。
+- **Post：** Family と Owner がテキストまたは画像付きの近況を投稿し、公開範囲を `public` または `family` に設定できます。ログインユーザーはフラットなテキストコメントを投稿でき、投稿者本人または Owner が削除できます。Owner はすべての Post を管理します。
 - **Post 画像：** 1 件あたり最大 9 枚。バックエンドで権限を確認し、WebP に統一して永続メディア volume に保存します。
 - **家族 Q&A：** Family と Owner がそれぞれの画面から質問でき、Owner が回答します。一覧には回答時刻も表示します。
 - **まとまった支出：** 家族内だけで共有し、金額は正確な十進数、通貨は ISO 4217 コードで保持します。
 - **Dashboard：** 独立した Dashboard テーブルを作らず、最近の Post、Q&A、支出を集約します。
 - **インストール可能な体験：** レスポンシブ UI、PWA Manifest、本番 HTTPS デプロイを備えます。
-- **運用ツール：** Alembic Migration、アカウントとメディアの保守スクリプト、必須 CI、SSH 自動デプロイ、ヘルスチェック、commit 単位のロールバックを提供します。
+- **運用ツール：** Alembic Migration、アカウントとメディアの保守スクリプト、通知・メディアクリーンアップ worker、必須 CI、SSH 自動デプロイ、ヘルスチェック、commit 単位のロールバックを提供します。
 
 ## ロールと権限
 
@@ -87,7 +87,7 @@ eiheizone/
 `-- deploy.env.example
 ```
 
-正式ドキュメント：[`docs/README.md`](docs/README.md)。履歴版は [`docs/versions/`](docs/versions/) にあり、[`v1.1.0`](docs/versions/v1.1/) もここに含まれます。進行中の変更は [`docs/iterations/`](docs/iterations/) に記録します。
+正式ドキュメント：[`docs/README.md`](docs/README.md)。履歴版は [`docs/versions/`](docs/versions/) にあり、[`v1.4`](docs/versions/v1.4/) もここに含まれます。進行中の変更は [`docs/iterations/v1.5/`](docs/iterations/v1.5/) に、延期項目は [`docs/iterations/backlog/`](docs/iterations/backlog/) に記録します。
 
 ## ローカルセットアップ
 
@@ -207,11 +207,11 @@ E2E ランナーは `eiheizone_test` だけを使用し、架空のアカウン�
 
 本番 `.env`、デプロイ状態、データベース、メディア volume はサーバー上に保存し、Git には含めません。`rollback.sh` は以前の安定 commit を復元できますが、volume の削除や Alembic Migration の逆実行は行いません。初期設定、ロールバック、画像クリーンアップ、バックアップと復旧の境界は [`docs/operations.md`](docs/operations.md) を参照してください。
 
-## v1.1 の範囲と既知のリスク
+## 現在の範囲と既知のリスク
 
 - アプリケーション UI は中国語のみで、利用にはネットワーク接続が必要です。家族の実データをオフラインキャッシュしません。
-- 登録、招待、セルフサービスのパスワード復旧、Post 画像以外の一般添付、コメント、チャット、通知、検索、AI、完全な家計簿・レポート機能は含まれません。
-- 公開済み Post の画像追加・削除・並べ替えは未対応で、孤立画像の清掃は保守スクリプトを手動実行します。
-- PostgreSQL と Post 画像は Docker named volume に保存されます。別ホストへの暗号化バックアップと復旧テストは延期されており、ホスト障害でデータを完全に失う可能性があります。
+- 登録、招待、セルフサービスのパスワード復旧、Post 画像以外の一般添付、スレッド形式のコメント返信、リアルタイムチャット、検索、AI、完全な家計簿・レポート機能は含まれません。
+- Owner は公開済み Post の画像追加・削除・並べ替えが可能で、未関連付けや孤立した画像ファイルは `media-cleanup-worker` または保守スクリプトで清掃されます。
+- PostgreSQL と Post 画像は Docker named volume に保存されます。COS 暗号化バックアップスクリプトと隔離環境での復旧演習は検証済みですが、日次 cron と自動アラートは延期（`Deferred`）されており、ホスト障害時に直近の変更を失うリスクが残ります。
 - 利用範囲を拡大する前に、依存関係監査と完全な回帰テストを再実行してください。
 - このリポジトリには、本番の秘密情報、実際の家族データ、Android 署名鍵、配布可能な Android パッケージは含まれません。

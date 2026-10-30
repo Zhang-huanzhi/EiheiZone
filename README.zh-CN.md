@@ -4,12 +4,12 @@
 
 EiheiZone 是一个私密的家庭信息门户，用于分享生活近况、回答家人问题和记录重大支出。它在一个响应式 Web 应用中，同时提供公开内容、仅家人可见区域和 Owner 管理区。
 
-**当前版本：** v1.1.0，已于 2026 年 8 月 15 日通过发布验收；对应 Git tag 在发布提交合并且生产验证成功后创建。
+**当前版本：** v1.5.1，本次迭代完成文档、分支、PR 和版本收口规范化；产品 tag 仍需在发布提交合并且生产验证成功后创建。
 
 **生产站点：** [https://eihei.zone](https://eihei.zone)
 
 <p align="center">
-  <img src="frontend/public/screenshots/login-mobile.png" alt="EiheiZone 移动端登录页面" width="280">
+  <img src="docs/_附件_/owner-workspace.png" alt="EiheiZone 登录后的 Owner 管理工作台" width="860">
 </p>
 
 > 应用界面使用简体中文。上方的英语、中文和日语只表示 README 文档翻译，不表示应用已经实现多语言。
@@ -23,7 +23,7 @@ EiheiZone 是一个私密的家庭信息门户，用于分享生活近况、回�
 - **重大支出：** 仅家庭成员可见，金额使用精确十进制，币种使用 ISO 4217 代码。
 - **Dashboard：** 聚合近期 Post、QA 和 Expenditure，不建立独立 Dashboard 数据表。
 - **可安装体验：** 响应式页面、PWA Manifest 和生产 HTTPS 部署。
-- **运维工具：** Alembic Migration、账号和媒体维护脚本、CI 必需检查、SSH 自动部署、健康检查和基于 commit 的回滚。
+- **运维工具：** Alembic Migration、账号和媒体维护脚本、通知与媒体清理 worker、CI 必需检查、SSH 自动部署、健康检查和基于 commit 的回滚。
 
 ## 角色与权限
 
@@ -87,7 +87,7 @@ eiheizone/
 `-- deploy.env.example
 ```
 
-正式项目文档：[`docs/README.md`](docs/README.md)。历史版本归档位于 [`docs/versions/`](docs/versions/)，其中包括 [`v1.1.0`](docs/versions/v1.1/)；活动变更记录在 [`docs/iterations/`](docs/iterations/)。
+正式项目文档：[`docs/README.md`](docs/README.md)。历史版本归档位于 [`docs/versions/`](docs/versions/)，其中包括 [`v1.4`](docs/versions/v1.4/)；活动变更记录在 [`docs/iterations/v1.5/`](docs/iterations/v1.5/)，延期工作见 [`docs/iterations/backlog/`](docs/iterations/backlog/)。
 
 ## 本地配置
 
@@ -207,11 +207,11 @@ E2E 脚本只使用 `eiheizone_test`，创建虚构账号，并临时使用 `310
 
 生产 `.env`、部署状态、数据库与媒体卷保存在服务器且不进入 Git。`rollback.sh` 可以恢复上一稳定 commit，但不会删除 volumes 或逆向执行 Alembic Migration。初始化、回滚、图片清理、备份和恢复边界见 [`docs/operations.md`](docs/operations.md)。
 
-## v1.1 边界与已知风险
+## 当前边界与已知风险
 
 - 应用界面仅有中文，且必须联网使用；不会离线缓存家庭真实数据。
-- 应用不包括注册、邀请、自助找回密码、Post 图片以外的通用附件、嵌套评论回复、即时聊天、搜索、AI 和完整记账报表。
-- 已发布 Post 暂不支持增删或重排图片，孤立图片清理仍需人工执行维护脚本。
-- PostgreSQL 和 Post 图片保存在 Docker named volume。异机加密备份和恢复演练已暂缓，因此主机损坏可能导致永久数据丢失。
+- 应用不包括公开注册、邀请、自助找回密码、Post 图片以外的通用附件、嵌套评论回复、即时聊天、搜索、AI 和完整记账报表。
+- Owner 可在已发布 Post 中增删和重排图片；过期未关联图片与孤立文件由 `media-cleanup-worker` 定期清理，也可手工运行维护脚本。
+- PostgreSQL 和 Post 图片保存在 Docker named volume。COS 客户端加密备份脚本与隔离恢复演练已完成，但每日定时任务和自动告警尚未启用（`Deferred`），主机损坏仍可能造成近期变更丢失。
 - 扩大部署范围前应重新执行依赖审计和完整回归。
 - 本仓库不包含生产秘密、真实家庭数据、Android 签名密钥或可分发 Android 安装包。

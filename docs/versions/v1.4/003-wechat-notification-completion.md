@@ -43,7 +43,7 @@
 
 - 后端：`backend/app/core/config.py`、`backend/app/modules/notifications/{repository,service,wechat,worker}.py`、`backend/.env.example`、`deploy.env.example`；
 - 测试：`backend/tests/notifications/{test_wechat,test_notification_migration}.py`、`backend/tests/integration/test_api_permissions.py`、`frontend/src/features/notifications/{notification-api.test.ts,notification-settings.test.tsx}`；
-- 文档：`docs/iterations/v1.4/{README,001-wechat-test-notifications,003-wechat-notification-completion}.md`。
+- 文档：`docs/versions/v1.4/{README,001-wechat-test-notifications,003-wechat-notification-completion}.md`。
 
 ## 6. 验收标准
 

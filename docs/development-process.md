@@ -1,75 +1,51 @@
 # 当前开发流程
 
-| 适用产品版本 | Current / v1.4.x |
+> 当前基线：`v1.5.1`（最后更新：2026-10-30）
+
+本文档说明日常迭代、分支、测试、归档和发版方式。V1 初期的六阶段流程归档在 [`versions/v1/00b_v1_development_process.md`](versions/v1/00b_v1_development_process.md)，不再作为日常迭代模板。
+
+## 1. 迭代流转与状态
+
+![EiheiZone 迭代与版本归档流转](_附件_/iteration-workflow.png)
+
+图表文件：[`_附件_/iteration-workflow.puml`](_附件_/iteration-workflow.puml)（PlantUML）、[`_附件_/iteration-workflow.svg`](_附件_/iteration-workflow.svg)（SVG 矢量，可直接用 draw.io 编辑）与 [`_附件_/iteration-workflow.png`](_附件_/iteration-workflow.png)（PNG）。
+
+一次功能或一组相关变更在 `docs/iterations/v1.x/` 中建立一份迭代文档（模板见 [`iterations/_template.md`](iterations/_template.md)），只使用 3 种状态：
+
+| 状态 | 含义 |
 | --- | --- |
-| 文档状态 | Active |
-| 最后更新 | 2026-10-09 |
+| `In Progress` | 已从最新 `main` 创建短期分支，明确目标、范围、不做事项和验收标准，正在实施或验证 |
+| `Accepted` | 受影响检查与业务验收通过，实际测试结果与遗留风险已记录；版本收口时移入 `docs/versions/v1.x/` |
+| `Deferred` | 暂停推进并移入 `docs/iterations/backlog/`，保留已验证事实与未完成边界，不计入已交付能力 |
 
-本文档描述 V1 之后的轻量迭代与发布流程。V1 当时采用的六阶段流程保存在 [`versions/v1/00b_v1_development_process.md`](versions/v1/00b_v1_development_process.md)，不作为后续迭代的强制模板。
+小错字或不改变外部行为的局部维护，直接记录在提交和 PR 中，不必新建迭代文档。
 
-## 1. 迭代生命周期
-
-| 阶段 | 文档状态 | 退出条件 |
-| --- | --- | --- |
-| 提议 | Proposed | 目标、范围、不做事项和验收标准明确。 |
-| 实施 | In Progress | 代码、Migration、测试和必要文档在短期分支中同步更新。 |
-| 验收 | Accepted | 受影响检查与业务验收完成，实际结果和遗留风险已记录。 |
-| 归档 | Released / Frozen | 同一产品版本的迭代已汇总到 `versions/v1.x/`，合并、部署和 tag 可追踪。 |
-
-一次功能或一组相关变更使用一份 `iterations/v1.x/` 文档，记录目标、范围、技术选择、影响、验收、测试和发布事实。小错字或不改变外部行为的局部维护可以只记录在提交与 PR 中。
+做计划时，如果方案会影响多个模块、部署、安全或数据边界，或者以后的迭代还得重做这个决定，就按 [`adr/README.md`](adr/README.md) 新增 ADR，并从迭代文档链接。只留在当前功能内部的实现取舍，写在迭代文档里即可。
 
 ## 2. 分支与 Pull Request
 
-1. 从最新 `main` 创建短期 `feat/`、`fix/` 或 `docs/` 分支。
-2. 在同一分支完成代码、测试、Migration 和受影响文档，禁止回填已经冻结的旧版本范围。
-3. 本地运行受影响检查；涉及共同契约或正式发布时执行完整检查。
-4. 推送分支并创建 Pull Request，说明行为变化、Migration/配置影响、测试结果和遗留风险。
-5. `Backend`、`Frontend`、`Deployment artifacts` required checks 全部成功且分支与 `main` 同步后才可合并。
+1. 从最新 `main` 创建一条短期分支：`<type>/v<version>-<iteration-id>-<kebab-topic>`，允许类型为 `feat`、`fix`、`docs`、`test`、`ops`、`refactor`（如 `docs/v1.5.1-001-documentation-standardization`）。
+2. 同一功能后续修改留在该分支，代码、测试、Migration 和受影响现行文档同步更新，不回填已冻结的旧版本文档。
+3. PR 标题使用 `<type>(<scope>): <summary> [v<version>-<id>]`，正文链接迭代文档并说明范围、数据/部署影响、验证结果与遗留风险。
+4. `Backend`、`Frontend`、`Deployment artifacts` 三项 required checks 全部通过后才可合并。
 
-GitHub Actions 对所有 Pull Request 运行 CI；合并到 `main` 后，只有变更包含 `docs/**` 之外的路径才再次运行 CI 并进入自动部署链路。纯 `docs/**` 变更仍须在 Pull Request 阶段通过现有 required checks，但合并后不部署生产环境。`main` 应始终保持可运行、可迁移和可发布；测试失败、文档证据矛盾或尚未验证的发布条件不得写成 Pass。
+合并到 `main` 后，运行时代码、部署脚本和会进入站点的静态资源才会再次触发 `main` CI 与生产自动部署。只包含 `docs/**`、根目录三份 README、`AGENTS.md`、`.github/pull_request_template.md` 或 `.github/workflows/**` 的 push 在 PR 阶段完成检查，合并后不触发生产部署。依据见 [ADR-0002](adr/0002-skip-deploy-for-non-runtime-files.md)。
 
-## 3. 版本归档
+## 3. 版本收口与发版
 
-当同一目标版本的迭代全部 Accepted 后：
+当同一目标版本的已完成迭代全部 `Accepted` 后：
 
-1. 创建 `versions/v1.x/README.md`，汇总版本能力、阅读顺序、Migration、配置影响、验证证据和遗留风险；
-2. 将整个 `iterations/v1.x/`（包括 `_附件_/`）移动到 `versions/v1.x/`，保持迭代文件名和相对链接稳定；
-3. 修正当前文档、仓库 README 和其他入口链接，`iterations/README.md` 继续服务后续活动版本；
-4. 统一版本号、状态和互相矛盾的历史记录，只依据实际代码与已执行验证修正事实；
-5. 通过 PR 合并归档提交，不在活动分支或未通过 CI 的提交上创建产品 tag。
+1. 将已完成迭代从 `docs/iterations/v1.x/` 移入 `docs/versions/v1.x/`，未完成项移入 `docs/iterations/backlog/`（标为 `Deferred`）；
+2. 编写 `docs/versions/v1.x/README.md`，汇总完成项、Migration、验证证据和未包含能力；
+3. 更新 `docs/README.md` 与 `docs/iterations/README.md` 入口链接，不保留空壳旧版本目录；
+4. 归档 PR 合并、生产部署（如涉及代码）和健康检查通过后，在对应 `main` 提交上创建 annotated tag（如 `v1.5.0`）和 GitHub Release。
 
-## 4. 发布与 tag
+## 4. 变更同步清单
 
-1. 归档 PR 合并到 `main` 后，等待该提交的 CI 与 Production Deploy workflow 成功。
-2. 验证健康接口、HTTPS、登录及本版本受影响的核心流程。
-3. 在已部署且验证通过的 `main` 提交上创建 annotated tag，例如 `v1.1.0`。
-4. 推送 tag，并使用版本 README 创建对应 GitHub Release。
-5. 发布记录必须能追踪 tag、完整 commit、Migration、自动化检查、部署时间和仍接受的风险。
-
-版本号遵循语义化约定：
-
-```text
-v1.0.0  首个正式交付
-v1.1.0  向后兼容的新功能
-v1.1.1  缺陷、安全或依赖修复
-v2.0.0  不兼容的权限、API 或架构变化
-```
-
-## 5. 变更记录要求
-
-| 变化 | 必须留下的记录 |
+| 变更内容 | 同步更新位置 |
 | --- | --- |
-| 新功能或缺陷修复 | 代码、回归测试、迭代文档或 PR 中的实际结果 |
-| 数据库结构变化 | 新 Alembic Migration、Migration 测试和升级影响 |
-| 当前架构摘要变化 | 更新 `architecture.md` |
-| 部署、备份或恢复方式变化 | 更新 `operations.md` |
-| 跨模块或长期架构取舍 | 新增 `adr/`，并从迭代或版本文档链接 |
-
-提交信息使用简短的 Conventional Commits，例如：
-
-```text
-feat(posts): add image support
-fix(qas): preserve owner route context
-test(e2e): cover owner question workflow
-docs: archive v1.1 release
-```
+| 新功能或缺陷修复 | 代码、回归测试、当次迭代文档或 PR 验证记录 |
+| 数据库结构变化 | Alembic Migration、专用测试库升级验证记录 |
+| 系统组件或数据契约变化 | [`architecture.md`](architecture.md) |
+| 部署、回滚、备份或清理方式变化 | [`operations.md`](operations.md) |
+| 影响多个模块、部署、安全或数据边界，或以后还会重做的技术选择 | [`adr/`](adr/README.md) |

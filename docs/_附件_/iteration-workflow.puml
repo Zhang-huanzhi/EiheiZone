@@ -1,0 +1,40 @@
+@startuml
+!theme plain
+
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam roundcorner 6
+skinparam ArrowColor #475569
+skinparam ArrowThickness 1.2
+skinparam DefaultTextAlignment center
+skinparam nodesep 40
+skinparam ranksep 45
+
+skinparam rectangle {
+  BackgroundColor #F8FAFC
+  BorderColor #CBD5E1
+  FontColor #0F172A
+}
+
+skinparam storage {
+  BackgroundColor #EFF6FF
+  BorderColor #60A5FA
+  FontColor #0F172A
+}
+
+title EiheiZone - 迭代与版本归档流转
+
+rectangle "1. 开工 (In Progress)\n新建短期分支\niterations/v1.x/NNN-topic.md" as in_progress
+rectangle "2. 验证与 PR\n运行受影响检查与 CI\n更新测试记录与现行文档" as verify
+rectangle "3. 验收合并 (Accepted)\n合并至 main\n非纯文档变更自动部署生产" as accepted
+storage "4. 版本归档\n移入 versions/v1.x/\n汇总版本 README 与 Git tag" as archived
+storage "延期池 (Deferred)\n移入 iterations/backlog/\n保留已验证事实与未完成边界" as deferred
+
+in_progress -right-> verify : 完成实现
+verify -right-> accepted : CI 与验收通过
+accepted -right-> archived : 版本收口
+in_progress -down-> deferred : 暂停推进
+verify -down-> deferred : 暂缓合入
+deferred .up.> in_progress : 后续版本新建迭代与分支
+@enduml

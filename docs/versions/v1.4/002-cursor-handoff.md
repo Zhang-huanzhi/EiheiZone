@@ -65,7 +65,7 @@ Cursor 已经读取仓库根目录 `AGENTS.md`，因此协作约定继续放在�
 | 检查 | 结果 | 证据 |
 | --- | --- | --- |
 | 建立分支 | 已完成本地分支 | `docs/v1.4-002-cursor-handoff` |
-| 独立迭代文档与入口 | 已写入 | 本文件；`docs/iterations/v1.4/README.md` |
+| 独立迭代文档与入口 | 已写入 | 本文件；`docs/versions/v1.4/README.md` |
 | `AGENTS.md` 可跟踪 | 待提交时核对 | 已去掉 `/AGENTS.md` 忽略规则，并补上沟通约定 |
 | Git 约定 | 已改写 | 仓库与上一级 `AGENTS.md`：可以执行 Git，一次功能一条分支 |
 | ADR | 已写入 | [ADR-0001](../../adr/0001-coding-agent-collaboration.md)，状态 Accepted |

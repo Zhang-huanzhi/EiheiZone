@@ -5,7 +5,7 @@
 | ---- | ------------------------------------------------------------------------ |
 | 状态   | Accepted                                                                 |
 | 日期   | 2026-10-13                                                               |
-| 相关迭代 | [V1.4 / 002 Codex 到 Cursor 交接](../iterations/v1.4/002-cursor-handoff.md) |
+| 相关迭代 | [V1.4 / 002 Codex 到 Cursor 交接](../versions/v1.4/002-cursor-handoff.md) |
 
 
 ## 背景

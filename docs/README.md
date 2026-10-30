@@ -1,37 +1,38 @@
 # EiheiZone 文档
 
-本目录保存 EiheiZone 的正式项目文档。当前文档描述现行系统与工作方式，版本目录保存已经验收并冻结的历史事实；源代码、Migration、自动化测试和部署配置仍以仓库实现为准。
+本目录保存 EiheiZone 的正式工程文档。根目录下的现行文档随系统变化直接更新；`versions/` 保存已验收版本的冻结记录，不随后续功能回填；源代码、Migration 和自动化测试以仓库实现为准。
 
-## 文档分层
+> 当前文档基线：`v1.5.1`（最后更新：2026-10-30）
 
-| 路径 | 职责 | 生命周期 |
+## 1. 现行文档
+
+日常开发、运维与架构查阅只看这四处：
+
+| 文档 | 说明 |
+| --- | --- |
+| [`architecture.md`](architecture.md) | 当前系统上下文、生产容器架构、模块职责与数据安全边界 |
+| [`operations.md`](operations.md) | CI/CD、自动部署、回滚、媒体清理与 COS 备份恢复手册 |
+| [`development-process.md`](development-process.md) | 分支、迭代生命周期、PR 检查、版本归档与发版流程 |
+| [`adr/README.md`](adr/README.md) | 跨模块或长期复用的架构决策记录（ADR） |
+
+## 2. 活动迭代与延期项
+
+新功能或缺陷修复在 `iterations/v1.x/` 中一题一档，版本收口时归档至 `versions/v1.x/`：
+
+- [当前活动版本：`iterations/v1.5/`](iterations/v1.5/README.md)
+- [延期工作池：`iterations/backlog/`](iterations/backlog/006-basic-disaster-recovery.md)（保留已验证证据，不计入已交付能力）
+- [迭代编写规则](iterations/README.md) 与 [可裁剪模板](iterations/_template.md)
+
+## 3. 历史版本归档
+
+| 版本 | 归档入口 | 核心交付 |
 | --- | --- | --- |
-| `development-process.md` | 当前迭代、分支、测试、归档和发布流程 | 持续更新 |
-| `architecture.md` | 当前系统职责、权限和运行边界摘要 | 持续更新 |
-| `operations.md` | 当前 CI/CD、部署、Migration、备份和恢复基线 | 持续更新 |
-| `versions/v1/` | `v1.0.0` 的完整历史交付材料 | Frozen |
-| `versions/v1.1/` | `v1.1.0` 的五次迭代、发布摘要和验证记录 | Frozen |
-| `versions/v1.2/` | `v1.2` 的三次性能、网络和部署流程迭代 | Frozen / Accepted |
-| `versions/v1.3/` | `v1.3` 的五次图片、加载、监控和 HTTP/3 迭代 | Frozen / Accepted |
-| `iterations/v1.4/` | 当前 v1.4 活动迭代入口 | In Progress |
-| `iterations/` | 尚未归档版本的活动迭代记录与模板 | 随迭代更新 |
-| `adr/` | 影响多个模块或未来演进的架构决策 | 按需新增 |
-
-产品版本使用 `v1.0.0`、`v1.1.0` 等 Git tag。活动迭代在 `iterations/v1.x/` 中积累；版本验收时，将整组记录移动到 `versions/v1.x/`，补充版本 README，并在合并、CI 和生产验证成功后创建 tag 与 GitHub Release。
-
-## 阅读入口
-
-- 初次了解项目：阅读仓库根目录对应语言的 README；
-- 了解当前怎么开发和发布：阅读 [`development-process.md`](development-process.md)；
-- 了解当前系统：阅读 [`architecture.md`](architecture.md)；
-- 了解部署、回滚和数据边界：阅读 [`operations.md`](operations.md)；
-- 审阅 `v1.0.0`：阅读 [`versions/v1/README.md`](versions/v1/README.md)；
-- 审阅 `v1.1.0`：阅读 [`versions/v1.1/README.md`](versions/v1.1/README.md)；
-- 审阅 `v1.2`：阅读 [`versions/v1.2/README.md`](versions/v1.2/README.md)；
-- 审阅 `v1.3`：阅读 [`versions/v1.3/README.md`](versions/v1.3/README.md)；
-- 了解 v1.4 活动迭代：阅读 [`iterations/v1.4/README.md`](iterations/v1.4/README.md)；
-- 了解迭代规则：阅读 [`iterations/README.md`](iterations/README.md)。
+| `v1.4` | [`versions/v1.4/README.md`](versions/v1.4/README.md) | 微信测试号通知、Post 扁平评论、已发布 Post 图片编辑与定时清理、部署阻断恢复 |
+| `v1.3` | [`versions/v1.3/README.md`](versions/v1.3/README.md) | 图片预览、结构化加载反馈、慢请求监控与异常脱敏、HTTP/3 验证 |
+| `v1.2` | [`versions/v1.2/README.md`](versions/v1.2/README.md) | 性能基线、跨境公网诊断、纯文档变更跳过部署规则 |
+| `v1.1.0` | [`versions/v1.1/README.md`](versions/v1.1/README.md) | Post 多图上传、Family 发帖、QA 回答时间、GitHub Actions SSH 自动部署 |
+| `v1.0.0` | [`versions/v1/README.md`](versions/v1/README.md) | 初始版本需求、设计、计划、测试、发布与复盘全套交付材料 |
 
 ## 公开边界
 
-文档不得加入真实 `.env`、数据库备份、家庭数据、SSH 私钥、`signing.keystore`、`signing-key-info.txt`、完整 Android 签名 ZIP 或任何密码。APK/AAB 如需分发，应通过独立的受控渠道提供，不与公开源代码和文档混放。
+文档不得加入真实 `.env`、数据库备份、家庭数据、SSH 私钥、`signing.keystore`、`signing-key-info.txt`、完整 Android 签名 ZIP 或任何密码。APK/AAB 如需分发，应通过独立受控渠道提供，不与公开源代码和文档混放。

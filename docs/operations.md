@@ -1,11 +1,8 @@
 # 当前运维基线
 
-| 适用产品版本 | Current / v1.1.x |
-| --- | --- |
-| 文档状态 | Active |
-| 最后更新 | 2026-08-15 |
+> 当前基线：`v1.5.1`（最后更新：2026-10-30）
 
-本文档记录当前安全运维、自动发布和恢复边界。`v1.0.0` 的完整发布事实保存在 [`versions/v1/05_v1_release.md`](versions/v1/05_v1_release.md)，v1.1 自动发布链路的建立与演练证据保存在 [`versions/v1.1/003_github_ssh_cicd.md`](versions/v1.1/003_github_ssh_cicd.md)。
+本文档记录当前安全运维、自动发布、媒体清理和恢复边界。历史发布事实保存在对应 `versions/` 目录；v1.4 部署恢复证据见 [`versions/v1.4/008-production-deploy-recovery.md`](versions/v1.4/008-production-deploy-recovery.md)。
 
 ## 1. 环境与持久化边界
 
@@ -19,7 +16,7 @@
 
 ## 2. CI 与自动部署
 
-所有 Pull Request 都会运行 CI。`main` push 仅在变更包含 `docs/**` 之外的路径时运行 CI；纯 `docs/**` 变更合并后跳过 CI，也不会触发后续生产部署：
+所有 Pull Request 都会运行 CI。合并到 `main` 后，只有变更碰到运行时代码、部署脚本或仍会进入站点的静态资源时，才运行 `main` CI 并在成功后部署。一次 push 里的文件如果都落在 `docs/**`、根目录 `README.md` / `README.zh-CN.md` / `README.ja.md`、`AGENTS.md`、`.github/pull_request_template.md`、`.github/workflows/**` 之中，则跳过 `main` CI，也不会触发生产部署。`frontend/public/screenshots/login-mobile.png` 仍是 PWA 安装预览图，修改它会部署。
 
 | Job | 检查 |
 | --- | --- |
@@ -101,7 +98,11 @@ sudo docker compose exec backend env PYTHONPATH=/app python scripts/cleanup_post
 
 ## 7. 备份与秘密
 
-named volume 只能覆盖容器重建和正常重启，不能覆盖 VPS 整机损坏、误删或磁盘不可用。`backup-to-cos.sh` 每天将 PostgreSQL custom dump 与 `/app/media` 图片归档为一份备份，通过 rclone crypt 客户端加密后上传到腾讯云 COS，保留最近 7 份。脚本在本地快照期间短暂停止 backend；本地数据库和图片快照完成后先恢复 backend 并等待健康检查，再执行网络上传。
+named volume 只能覆盖容器重建和正常重启，不能覆盖 VPS 整机损坏、误删或磁盘不可用。
+
+每日 COS 备份尚未启用。`backup-to-cos.sh` 已完成脚本模拟、虚构文件上传/下载和隔离恢复演练，但生产 crontab 没有安装，也没有自动告警。下面是已准备、尚未作为持续服务使用的步骤。安装每日任务前，必须先把脚本修复合并并部署，再完成一次正式备份和恢复记录。不要按本节直接添加 cron。延期记录见 [`iterations/backlog/006-basic-disaster-recovery.md`](iterations/backlog/006-basic-disaster-recovery.md)。
+
+脚本的设计是：把 PostgreSQL custom dump 与 `/app/media` 图片归档为一份备份，通过 rclone crypt 客户端加密后上传到腾讯云 COS，保留最近 7 份。本地快照期间短暂停止 backend；数据库和图片快照完成后先恢复 backend 并等待健康检查，再执行网络上传。
 
 ### 初始化 COS 备份
 
@@ -117,7 +118,7 @@ named volume 只能覆盖容器重建和正常重启，不能覆盖 VPS 整机�
    sudo chmod 600 /etc/rclone/rclone.conf
    ```
 4. 使用只含虚构内容的临时文件，通过 crypt remote 上传、下载并比较文件，然后删除 COS 上的临时对象。将 crypt 密码另行存入密码管理器；恢复时需要这份密码，丢失后无法解密备份。
-5. 确认仓库部署到 `/opt/eiheizone` 后，创建本地目录并安装 root 定时任务：
+5. 每日 cron 尚未安装，现在不要执行本步。后续启用时，在修复后的脚本已经部署到 `/opt/eiheizone` 之后，创建本地目录并安装 root 定时任务：
 
    ```bash
    sudo install -d -m 700 /var/backups/eiheizone
@@ -131,9 +132,9 @@ named volume 只能覆盖容器重建和正常重启，不能覆盖 VPS 整机�
    0 3 * * * /bin/bash /opt/eiheizone/backup-to-cos.sh >> /var/log/eiheizone-backup.log 2>&1
    ```
 
-首次正式执行前，以 root 手工运行一次 `/bin/bash /opt/eiheizone/backup-to-cos.sh`，确认 `docker compose ps` 显示 backend 健康、COS 中出现当日加密备份。脚本要求以能管理 Docker Compose 的用户运行；默认以 root 运行。快照完成后服务会先恢复，上传在服务健康后进行。恢复 backend 时使用 `docker compose up --no-recreate`，这样不会在缺少 `DEPLOY_IMAGE_TAG` 时把正在运行的镜像换成 `latest`。`cos` remote 需要 `no_check_bucket = true`，避免没有建桶权限的子用户在上传前尝试创建存储桶。上传或远端校验失败时，脚本返回非零并保留本地恢复材料；这些材料包含未加密数据库和图片，权限为 `0700`，应尽快排查上传并在确认远端备份安全后删除。上传和校验成功后本地材料会删除，再清理超出最近 7 份的旧对象。若清理失败，脚本返回失败但不会影响新备份。
+启用每日任务时，先以 root 手工运行一次 `/bin/bash /opt/eiheizone/backup-to-cos.sh`，确认 `docker compose ps` 显示 backend 健康、COS 中出现当日加密备份。脚本要求以能管理 Docker Compose 的用户运行；默认以 root 运行。快照完成后服务会先恢复，上传在服务健康后进行。恢复 backend 时使用 `docker compose up --no-recreate`，这样不会在缺少 `DEPLOY_IMAGE_TAG` 时把正在运行的镜像换成 `latest`。`cos` remote 需要 `no_check_bucket = true`，避免没有建桶权限的子用户在上传前尝试创建存储桶。上传或远端校验失败时，脚本返回非零并保留本地恢复材料；这些材料包含未加密数据库和图片，权限为 `0700`，应尽快排查上传并在确认远端备份安全后删除。上传和校验成功后本地材料会删除，再清理超出最近 7 份的旧对象。若清理失败，脚本返回失败但不会影响新备份。
 
-通过下列命令人工检查最近日志与服务状态：
+启用之后，用下列命令人工检查最近日志与服务状态：
 
 ```bash
 sudo tail -n 100 /var/log/eiheizone-backup.log
@@ -141,7 +142,7 @@ cd /opt/eiheizone
 sudo docker compose ps
 ```
 
-本迭代不配置自动告警；需定期确认日志存在成功记录且 COS 中有最近备份。COS 与 VPS 同属腾讯云，不能覆盖云账号或平台级故障；实际存储和恢复流量费用按腾讯云控制台与账单为准。
+每日任务启用之前，没有备份日志需要例行检查。启用之后才需要定期确认日志存在成功记录且 COS 中有最近备份，当前也没有自动告警。COS 与 VPS 同属腾讯云，不能覆盖云账号或平台级故障；实际存储和恢复流量费用按腾讯云控制台与账单为准。
 
 ### 恢复到新 VPS
 
