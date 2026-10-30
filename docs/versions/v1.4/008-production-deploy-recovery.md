@@ -2,7 +2,7 @@
 
 | 目标版本 | `v1.4` |
 | --- | --- |
-| 状态 | In Progress |
+| 状态 | Accepted |
 | 日期 | 2026-10-29 |
 | 分支 | `fix/v1.4-008-production-deploy-recovery` |
 

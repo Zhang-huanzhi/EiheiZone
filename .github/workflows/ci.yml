@@ -7,6 +7,12 @@ on:
       - main
     paths-ignore:
       - docs/**
+      - README.md
+      - README.zh-CN.md
+      - README.ja.md
+      - AGENTS.md
+      - .github/pull_request_template.md
+      - .github/workflows/**
 
 permissions:
   contents: read

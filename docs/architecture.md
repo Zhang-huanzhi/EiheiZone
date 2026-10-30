@@ -1,62 +1,66 @@
 # 当前系统架构
 
-| 适用产品版本 | Current / v1.1.x |
+> 当前基线：`v1.5.1`（最后更新：2026-10-30）
+
+本文档是当前系统的架构摘要。历史完整设计分别保存在 [`versions/v1/02_v1_design.md`](versions/v1/02_v1_design.md) 和对应版本归档中；发生冲突时，以代码、Migration、Compose 配置和已验证的发布记录为准。
+
+## 1. 系统上下文与权限
+
+| 身份 | 能力边界 |
 | --- | --- |
-| 文档状态 | Active |
-| 最后更新 | 2026-08-15 |
+| Public | 阅读公开 Post 及公开图片；不能读取家庭内容、评论或写入数据。 |
+| Family | 阅读授权家庭内容，发布文字/图文 Post、评论和问题，接收通知。 |
+| Owner | 拥有 Family 能力，并可管理任意 Post、评论、问题回答和重大支出。 |
 
-本文档记录当前架构摘要。`v1.0.0` 的完整设计保存在 [`versions/v1/02_v1_design.md`](versions/v1/02_v1_design.md)，`v1.1.0` 的增量决策保存在 [`versions/v1.1/README.md`](versions/v1.1/README.md) 及其五份迭代记录。发生冲突时，以实际代码、Migration 和当前发布记录为准。
+所有角色共用一个站点 Origin。前端路由只负责用户体验和上下文保留，真正的身份、资源可见性、CSRF 和写入权限由 FastAPI、Service 规则和数据库查询共同约束。
 
-## 1. 系统上下文
+## 2. 生产容器架构
 
-| 身份 | 主要能力 |
-| --- | --- |
-| Public | 阅读 `public` 近况和其中的图片。 |
-| Family | 阅读家庭数据，发布文字或图文近况，提出问题。 |
-| Owner | 拥有 Family 能力，并管理全部近况、回答问题和管理重大支出。 |
+![EiheiZone v1.5.1 容器架构](_附件_/architecture-v1.5.1.png)
 
-公开访客、Family 和 Owner 使用同一个站点 Origin。页面入口按区域区分，但真正的身份、资源可见范围和写入权限由 FastAPI 再次校验，隐藏前端入口不能替代后端授权。
+图表文件：[`_附件_/architecture-v1.5.1.puml`](_附件_/architecture-v1.5.1.puml)（PlantUML）、[`_附件_/architecture-v1.5.1.svg`](_附件_/architecture-v1.5.1.svg)（SVG 矢量）与 [`_附件_/architecture-v1.5.1.png`](_附件_/architecture-v1.5.1.png)（PNG）。图只表达角色、运行容器、持久化资源和交付入口，不展开函数级实现。
 
-## 2. 容器架构
-
-![EiheiZone v1.1 容器架构](_附件_/architecture-v1.1.png)
-
-PlantUML 源文件：[`_附件_/architecture-v1.1.puml`](_附件_/architecture-v1.1.puml)。该图采用 C4 的 Context/Container 视角，只表达角色、运行容器、持久化资源和交付入口，不展开类或函数级实现。
-
-- Caddy 是唯一暴露 `80/443` 的服务，负责 HTTPS 和反向代理；
-- Next.js 负责 App Router 页面、服务端取数、表单和浏览器交互；
-- FastAPI 负责认证、授权、业务规则、事务、图片处理及全部数据库访问；
-- PostgreSQL 保存用户、Session、Post、PostImage、QA 和 Expenditure；
-- `media_data` named volume 保存处理后的 WebP 文件，不能脱离数据库记录单独解释其可见范围。
+- Caddy 暴露 `80/443`（包含 UDP 443），负责 HTTPS、HTTP/2/HTTP/3 和反向代理；
+- Next.js App Router 负责页面、Server loader、表单和浏览器交互；
+- FastAPI 负责认证、授权、业务规则、事务、图片处理和全部数据库访问；
+- `notification-worker` 轮询微信 Outbox，执行重试和失败记录；
+- `media-cleanup-worker` 执行过期 pending、cleanup_pending 和孤立媒体清理；
+- PostgreSQL 17 保存用户、Session、Post、PostImage、PostComment、QA、Expenditure、通知和清理运行记录；
+- `media_data` named volume 保存处理后的 WebP 文件，图片可见范围必须通过数据库关联和 FastAPI 鉴权解释；
+- GitHub Actions 通过固定 host key 的 SSH 调用 `deploy.sh`，构建完整 commit SHA 镜像并检查公网健康接口。
 
 ## 3. 代码与领域边界
 
-后端业务模块遵循 `Router -> Service -> Repository`：Router 处理 HTTP 输入、身份依赖和 CSRF，Service 负责业务规则与事务，Repository 负责数据访问。`auth`、`posts`、`qas`、`expenditures`、`dashboard` 保持独立模块，图片处理属于 `posts` 领域。
+后端业务模块遵循 `Router -> Service -> Repository`：Router 处理 HTTP 输入、身份依赖和 CSRF；Service 负责授权、业务规则和事务；Repository 负责数据访问。
 
-前端使用 Next.js App Router；`src/app/` 负责路由与布局，`src/features/` 保存领域 API、类型、表单和展示逻辑，`src/components/` 保存共享 UI。Family 与 Owner 可以复用表单组件，但各自保留明确的区域路由和成功跳转目标。
+- `auth`：用户、Session、登录和 CSRF；
+- `posts`：Post、图片上传/编辑、评论、媒体清理；
+- `qas`：家庭问题、回答和路由上下文；
+- `expenditures`：Owner 管理的重大支出；
+- `notifications`：微信绑定、Outbox、发送 worker 和通知设置；
+- `dashboard`：登录后的聚合视图。
 
-## 4. v1.1 数据与接口契约
+前端 `src/app/` 保存 App Router 页面和布局，`src/features/` 保存各领域 API、类型、Server loader、表单和展示逻辑，`src/components/` 保存跨领域 UI。Family 与 Owner 可以复用组件，但保留各自的路由上下文和成功跳转目标。
 
-- `POST /api/v1/uploads/image` 接受 Family 或 Owner 的图片，校验并转换为 WebP，创建 `pending` PostImage；
-- `POST /api/v1/posts` 接受可选 `image_ids`，按顺序绑定当前用户上传的图片；
-- `GET /api/v1/media/images/{image_id}` 根据关联 Post 和当前读者鉴权，公开图片可长期缓存，家庭图片使用 `private, no-store`；
-- `PostResponse` 返回 `author_id`、`author_display_name` 和 `images`，作者昵称实时取自用户资料；
-- Family 与 Owner 均可创建 Post，只有 Owner 可以编辑或删除任意 Post；
-- QA 响应继续返回 `answered_at`；Family 与 Owner 的提问页分别保持在各自 `/family/qas/*`、`/owner/qas/*` 路由上下文中。
+## 4. 当前数据与接口契约
 
-`v1.1.0` 唯一新增数据库 Migration 是 `c18f6a72d901_create_post_images.py`。Post 删除时数据库记录级联删除，并由应用清理物理文件；未绑定或清理失败的图片由维护脚本按需处理。
+- 图片上传先校验格式、大小、尺寸并重新编码为 WebP，再创建 `pending` PostImage；Post 删除或编辑移除图片时由应用清理物理文件，失败项进入重试流程；
+- Post 支持完整图片列表替换、顺序调整和 Owner 编辑；评论是登录用户可用的扁平文本资源，Owner 或作者可删除；
+- QA 和 Post 事件写入通知 Outbox，重复事件按唯一约束去重，发送失败按退避策略重试；
+- 微信绑定码短期有效、一次性使用并只保存哈希；已绑定用户不能重复生成绑定码；
+- 数据库当前 Migration head 为 `f1a2b3c4d5e6`，新增结构变化必须通过 Alembic Migration 和专用测试库验证。
 
-## 5. 安全与数据边界
+## 5. 安全、时间和数据边界
 
-- Session 保存在 PostgreSQL，浏览器使用 HttpOnly、Secure、SameSite Cookie；
+- Session 使用 PostgreSQL 持久化，浏览器使用 HttpOnly、Secure、SameSite Cookie；
 - 修改请求使用签名 Double Submit CSRF；
-- 权限在 Router 入口检查，并在 Service 规则和 Repository 查询中再次约束；
+- 权限在 Router、Service 和 Repository 查询层重复约束，不能依赖隐藏前端入口；
 - 数据库时间使用 UTC，界面按 `Asia/Shanghai` 展示；金额使用精确十进制，主键使用 UUID；
-- 图片上传执行格式、大小、尺寸和像素检查，并重新编码以移除原始元数据；
-- 开发、测试和生产数据隔离，真实环境变量、家庭数据、备份和签名材料不进入 Git。
+- 上传图片重新编码以移除原始元数据；生产环境变量、真实家庭数据、备份、私钥和签名材料不进入 Git；
+- 慢请求阈值、请求 ID 和异常脱敏日志用于定位问题，日志不应包含凭据或完整家庭内容。
 
-## 6. 交付边界
+## 6. 交付、回滚与恢复
 
-Pull Request 由 GitHub Actions 执行后端、前端和部署产物检查。`main` 的 CI 成功后，Deploy workflow 通过固定 SSH host key 调用生产服务器上的 `/opt/eiheizone/deploy.sh`。部署和回滚共享文件锁，以完整 commit SHA 标记镜像，并使用 Compose 就绪状态与公网健康接口共同判定结果。
+Pull Request 运行 Backend、Frontend 和 Deployment artifacts 检查。合并到 `main` 后，非纯文档变更才进入自动部署。`deploy.sh` 拒绝脏工作区和非 fast-forward 更新，使用完整 SHA 标记镜像，执行 Migration/Compose 更新并检查健康接口；失败时保存工作树、Compose、Migration 和容器日志。
 
-自动部署不等于数据备份。PostgreSQL 和 `media_data` 的 named volume 可以跨容器重建保留数据，但不能覆盖 VPS 丢失、磁盘损坏或误删；异机加密备份和恢复演练仍是明确的运维遗留事项。
+`rollback.sh` 只回退到 Migration head 兼容的历史提交，不逆向执行 Alembic Migration，也不删除 named volume。COS 备份脚本和隔离恢复演练已存在，但 v1.4/006 的每日 cron 尚未安装，因此当前不能把备份描述为持续运行且有告警的服务。
