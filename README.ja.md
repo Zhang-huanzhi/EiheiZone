@@ -4,12 +4,12 @@
 
 EiheiZone は、日々の近況共有、家族からの質問への回答、まとまった支出の記録を行うためのプライベートな家族向け情報ポータルです。公開コンテンツ、家族専用エリア、Owner 管理エリアを、1 つのレスポンシブ Web アプリケーションとして提供します。
 
-**現在のバージョン：** v1.5.1。v1.4 のクローズと、ドキュメント・ブランチ・PR・リリース手順の標準化を行う版です。Git tag はリリースコミットのマージと本番検証の成功後に作成します。
+**現在のバージョン：** v1.5。v1.4 のクローズと、ドキュメント・ブランチ・PR・リリース手順の標準化を行う版です。Git tag はリリースコミットのマージと本番検証の成功後に作成します。
 
 **本番サイト：** [https://eihei.zone](https://eihei.zone)
 
 <p align="center">
-  <img src="docs/_附件_/owner-workspace.png" alt="ログイン後の EiheiZone Owner ワークスペース" width="860">
+  <img src="docs/assets/owner-workspace.png" alt="ログイン後の EiheiZone Owner ワークスペース" width="860">
 </p>
 
 > アプリケーション UI は簡体字中国語です。上記の英語、中国語、日本語は README の翻訳であり、アプリケーションの多言語対応を示すものではありません。
@@ -87,7 +87,7 @@ eiheizone/
 `-- deploy.env.example
 ```
 
-正式ドキュメント：[`docs/README.md`](docs/README.md)。履歴版は [`docs/versions/`](docs/versions/) にあり、[`v1.4`](docs/versions/v1.4/) もここに含まれます。進行中の変更は [`docs/iterations/v1.5/`](docs/iterations/v1.5/) に、延期項目は [`docs/iterations/backlog/`](docs/iterations/backlog/) に記録します。
+正式ドキュメント：`docs/README.md`。履歴版は `docs/versions/` にあり、最新のアーカイブは `docs/versions/v1.4/` です。日常のタスクは `docs/tasks/` に記録し、ブランチと番号の規則は `docs/standards/branching-and-tasks.md` にあります。
 
 ## ローカルセットアップ
 
@@ -205,7 +205,7 @@ E2E ランナーは `eiheizone_test` だけを使用し、架空のアカウン�
 
 本番環境は 1 台の Docker Compose ホストで PostgreSQL 17、FastAPI、Next.js、Caddy を実行します。Pull Request は Backend、Frontend、Deployment artifacts のチェックを通過する必要があります。`main` の CI 成功後、GitHub Actions が固定した SSH host key を使って `/opt/eiheizone/deploy.sh` を呼び出します。スクリプトは fast-forward のみを許可し、完全な commit SHA でイメージを識別し、Compose の準備完了と公開ヘルス API を確認します。
 
-本番 `.env`、デプロイ状態、データベース、メディア volume はサーバー上に保存し、Git には含めません。`rollback.sh` は以前の安定 commit を復元できますが、volume の削除や Alembic Migration の逆実行は行いません。初期設定、ロールバック、画像クリーンアップ、バックアップと復旧の境界は [`docs/operations.md`](docs/operations.md) を参照してください。
+本番 `.env`、デプロイ状態、データベース、メディア volume はサーバー上に保存し、Git には含めません。`rollback.sh` は以前の安定 commit を復元できますが、volume の削除や Alembic Migration の逆実行は行いません。初期設定、ロールバック、画像クリーンアップ、バックアップと復旧の境界は `docs/operations.md` を参照してください。
 
 ## 現在の範囲と既知のリスク
 

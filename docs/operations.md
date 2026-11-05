@@ -1,8 +1,8 @@
 # 当前运维基线
 
-> 当前基线：`v1.5.1`（最后更新：2026-10-30）
+> 当前基线：`v1.5`（最后更新：2026-10-30）
 
-本文档记录当前安全运维、自动发布、媒体清理和恢复边界。历史发布事实保存在对应 `versions/` 目录；v1.4 部署恢复证据见 [`versions/v1.4/008-production-deploy-recovery.md`](versions/v1.4/008-production-deploy-recovery.md)。
+本文档记录当前安全运维、自动发布、媒体清理和恢复边界。历史发布事实保存在对应 `versions/` 目录；v1.4 部署恢复证据见 `versions/v1.4/008-production-deploy-recovery.md`。
 
 ## 1. 环境与持久化边界
 
@@ -100,7 +100,7 @@ sudo docker compose exec backend env PYTHONPATH=/app python scripts/cleanup_post
 
 named volume 只能覆盖容器重建和正常重启，不能覆盖 VPS 整机损坏、误删或磁盘不可用。
 
-每日 COS 备份尚未启用。`backup-to-cos.sh` 已完成脚本模拟、虚构文件上传/下载和隔离恢复演练，但生产 crontab 没有安装，也没有自动告警。下面是已准备、尚未作为持续服务使用的步骤。安装每日任务前，必须先把脚本修复合并并部署，再完成一次正式备份和恢复记录。不要按本节直接添加 cron。延期记录见 [`iterations/backlog/006-basic-disaster-recovery.md`](iterations/backlog/006-basic-disaster-recovery.md)。
+每日 COS 备份尚未启用。`backup-to-cos.sh` 已完成脚本模拟、虚构文件上传/下载和隔离恢复演练，但生产 crontab 没有安装，也没有自动告警。下面是已准备、尚未作为持续服务使用的步骤。安装每日任务前，必须确认脚本修复（#27）已部署，并完成一次正式备份和恢复记录。不要按本节直接添加 cron。延期记录见 `tasks/002-basic-disaster-recovery.md`。
 
 脚本的设计是：把 PostgreSQL custom dump 与 `/app/media` 图片归档为一份备份，通过 rclone crypt 客户端加密后上传到腾讯云 COS，保留最近 7 份。本地快照期间短暂停止 backend；数据库和图片快照完成后先恢复 backend 并等待健康检查，再执行网络上传。
 

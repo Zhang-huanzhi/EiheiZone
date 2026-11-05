@@ -59,4 +59,4 @@ Pull Request required checks、合并后的 Production Deploy workflow、线上�
 - PostgreSQL 和 `media_data` 尚无异机加密备份与定期恢复演练，VPS 整机损坏仍可能造成永久数据丢失；
 - 自动回滚不会逆向执行数据库 Migration，破坏性数据变更必须单独设计发布与恢复方案。
 
-当前开发、架构和运维规则以 [`../../development-process.md`](../../development-process.md)、[`../../architecture.md`](../../architecture.md) 和 [`../../operations.md`](../../operations.md) 为准。
+当前开发、架构和运维规则以 `docs/standards/development-process.md`、`docs/standards/branching-and-tasks.md`、`docs/architecture.md` 和 `docs/operations.md` 为准。

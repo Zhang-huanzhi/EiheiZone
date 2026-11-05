@@ -1,7 +1,7 @@
-## 关联迭代
+## 关联任务
 
-- 迭代文档：
-- 分支：
+- 任务：`TNNN` · `docs/tasks/NNN-kebab-topic.md`
+- 分支：`<type>/NNN-kebab-topic`
 
 ## 变更摘要
 
@@ -24,6 +24,7 @@
 - [ ] Backend
 - [ ] Frontend
 - [ ] Deployment artifacts
+- [ ] 任务 frontmatter 符合 `docs/schemas/task-frontmatter.schema.json`
 - [ ] 文档链接与 `git diff --check`
 
 ## 遗留风险与截图（按需）

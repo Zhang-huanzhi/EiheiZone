@@ -6,7 +6,7 @@
 | 归档日期 | 2026-10-30 |
 | 延期项 | 006 COS 基础数据防灾 |
 
-本目录归档 v1.4 已完成的八次迭代中的七次。006 已转入 [`../../iterations/backlog/006-basic-disaster-recovery.md`](../../iterations/backlog/006-basic-disaster-recovery.md)，不作为本版本已完成能力声明。
+本目录归档 v1.4 已完成的八次迭代中的七次。006 已转入 `docs/tasks/002-basic-disaster-recovery.md`（现 T002），不作为本版本已完成能力声明。
 
 ## 版本内容
 
@@ -31,4 +31,4 @@
 
 - COS 与 VPS 同属腾讯云，不能覆盖云账号或平台级故障。
 - 备份失败目前依靠日志人工发现，尚未配置自动告警。
-- 006 后续继续实施时，应新建 v1.5.x 迭代和新分支，不恢复已归档分支继续堆叠。
+- 006 后续继续实施时，应按 `docs/standards/branching-and-tasks.md` 新建任务和新分支，不恢复已归档分支继续堆叠。

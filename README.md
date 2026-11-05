@@ -4,12 +4,12 @@ English | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 EiheiZone is a private family information portal for sharing life updates, answering family questions, and recording significant expenses. It combines a public-facing feed with role-protected family and owner workspaces in one responsive web application.
 
-**Current version:** v1.5.1, a documentation and release-process standardization iteration after v1.4 closure. Product tags are created only after the release commit is merged and production verification succeeds.
+**Current version:** v1.5, a documentation and release-process standardization iteration after v1.4 closure. Product tags are created only after the release commit is merged and production verification succeeds.
 
 **Production site:** [https://eihei.zone](https://eihei.zone)
 
 <p align="center">
-  <img src="docs/_附件_/owner-workspace.png" alt="EiheiZone Owner workspace after sign-in" width="860">
+  <img src="docs/assets/owner-workspace.png" alt="EiheiZone Owner workspace after sign-in" width="860">
 </p>
 
 > The application interface is in Simplified Chinese. The English, Chinese, and Japanese options above are README translations, not application localization.
@@ -87,7 +87,7 @@ eiheizone/
 `-- deploy.env.example
 ```
 
-Formal project documentation: [`docs/README.md`](docs/README.md). Release archives are in [`docs/versions/`](docs/versions/), including [`v1.4`](docs/versions/v1.4/); active work is recorded in [`docs/iterations/v1.5/`](docs/iterations/v1.5/). Deferred work is listed in [`docs/iterations/backlog/`](docs/iterations/backlog/).
+Formal project documentation: `docs/README.md`. Release archives are in `docs/versions/`, including `docs/versions/v1.4/`; active tasks are recorded in `docs/tasks/`, and branch/numbering rules are in `docs/standards/branching-and-tasks.md`.
 
 ## Local setup
 
@@ -205,7 +205,7 @@ The E2E runner targets only `eiheizone_test`, creates synthetic accounts, and te
 
 Production runs PostgreSQL 17, FastAPI, Next.js, and Caddy on one Docker Compose host. Pull requests must pass Backend, Frontend, and Deployment artifacts checks. After a successful `main` CI run, GitHub Actions connects with a pinned SSH host key and invokes `/opt/eiheizone/deploy.sh`; the script fast-forwards `main`, tags images with the full commit SHA, waits for Compose, and checks the public health endpoint.
 
-The server keeps its production `.env`, deployment state, database, and media volume outside Git. `rollback.sh` restores the previous stable commit without deleting volumes or reversing Alembic migrations. See [`docs/operations.md`](docs/operations.md) for setup, rollback, media cleanup, backup, and recovery boundaries.
+The server keeps its production `.env`, deployment state, database, and media volume outside Git. `rollback.sh` restores the previous stable commit without deleting volumes or reversing Alembic migrations. Setup, rollback, media cleanup, backup, and recovery boundaries are in `docs/operations.md`.
 
 ## Current boundaries and known risks
 
