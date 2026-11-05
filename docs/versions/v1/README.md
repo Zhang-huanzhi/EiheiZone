@@ -19,7 +19,7 @@
 7. `05_v1_release.md`：V1 部署、分发、运维和风险接受；
 8. `06_v1_summary.md`：V1 成果和复盘。
 
-当前开发规则以 [`../../development-process.md`](../../development-process.md)、[`../../architecture.md`](../../architecture.md) 和 [`../../operations.md`](../../operations.md) 为准。
+当前开发规则以 `docs/standards/development-process.md`、`docs/standards/branching-and-tasks.md`、`docs/architecture.md` 和 `docs/operations.md` 为准。
 
 ## 历史修正
 

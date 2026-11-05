@@ -42,7 +42,7 @@ Cursor 已经读取仓库根目录 `AGENTS.md`，因此协作约定继续放在�
 
 上一级 `EiheiZone/AGENTS.md` 仍负责 `notes/` 与代码目录的工作区边界。代码仓库自己的 `AGENTS.md` 补上中文回答、先说明范围、以及只做解释时不改文件这三条，这样只克隆本仓库时也有同样的沟通约定。
 
-仓库和上一级工作区的 `AGENTS.md` 都允许执行 Git。一次功能或一次迭代只开一条短期分支，后续修改留在这条分支上；提交、推送、Pull Request 和合并仍要用户明确提出。上一级目录和 `notes/` 仍不主动提交。这项长期约定记录在 [ADR-0001](../../adr/0001-coding-agent-collaboration.md)。
+仓库和上一级工作区的 `AGENTS.md` 都允许执行 Git。一次功能或一次迭代只开一条短期分支，后续修改留在这条分支上；提交、推送、Pull Request 和合并仍要用户明确提出。上一级目录和 `notes/` 仍不主动提交。这项长期约定原记录在 ADR-0001（已移除）。
 
 ## 5. 影响范围
 
@@ -68,7 +68,7 @@ Cursor 已经读取仓库根目录 `AGENTS.md`，因此协作约定继续放在�
 | 独立迭代文档与入口 | 已写入 | 本文件；`docs/versions/v1.4/README.md` |
 | `AGENTS.md` 可跟踪 | 待提交时核对 | 已去掉 `/AGENTS.md` 忽略规则，并补上沟通约定 |
 | Git 约定 | 已改写 | 仓库与上一级 `AGENTS.md`：可以执行 Git，一次功能一条分支 |
-| ADR | 已写入 | [ADR-0001](../../adr/0001-coding-agent-collaboration.md)，状态 Accepted |
+| ADR | 已移除 | 原 ADR-0001，已在 T003 文档重构中删除 |
 | 登录说明移到本机路径 | 已在本机移动 | `.local/server-login.md`；`.codex/` 目录已删除 |
 | 停止跟踪登录说明 | 已暂存删除 | `git rm --cached -- .codex/server-login.local.md` |
 | 应用测试、Lint、构建 | 未运行 | 本次没有改应用代码 |

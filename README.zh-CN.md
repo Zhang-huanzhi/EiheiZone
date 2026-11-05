@@ -4,12 +4,12 @@
 
 EiheiZone 是一个私密的家庭信息门户，用于分享生活近况、回答家人问题和记录重大支出。它在一个响应式 Web 应用中，同时提供公开内容、仅家人可见区域和 Owner 管理区。
 
-**当前版本：** v1.5.1，本次迭代完成文档、分支、PR 和版本收口规范化；产品 tag 仍需在发布提交合并且生产验证成功后创建。
+**当前版本：** v1.5，本次迭代完成文档、分支、PR 和版本收口规范化；产品 tag 仍需在发布提交合并且生产验证成功后创建。
 
 **生产站点：** [https://eihei.zone](https://eihei.zone)
 
 <p align="center">
-  <img src="docs/_附件_/owner-workspace.png" alt="EiheiZone 登录后的 Owner 管理工作台" width="860">
+  <img src="docs/assets/owner-workspace.png" alt="EiheiZone 登录后的 Owner 管理工作台" width="860">
 </p>
 
 > 应用界面使用简体中文。上方的英语、中文和日语只表示 README 文档翻译，不表示应用已经实现多语言。
@@ -87,7 +87,7 @@ eiheizone/
 `-- deploy.env.example
 ```
 
-正式项目文档：[`docs/README.md`](docs/README.md)。历史版本归档位于 [`docs/versions/`](docs/versions/)，其中包括 [`v1.4`](docs/versions/v1.4/)；活动变更记录在 [`docs/iterations/v1.5/`](docs/iterations/v1.5/)，延期工作见 [`docs/iterations/backlog/`](docs/iterations/backlog/)。
+正式项目文档：`docs/README.md`。历史版本归档位于 `docs/versions/`，最新归档为 `docs/versions/v1.4/`；日常任务记录在 `docs/tasks/`，分支与编号规则见 `docs/standards/branching-and-tasks.md`。
 
 ## 本地配置
 
@@ -205,7 +205,7 @@ E2E 脚本只使用 `eiheizone_test`，创建虚构账号，并临时使用 `310
 
 生产环境在单台 Docker Compose 主机上运行 PostgreSQL 17、FastAPI、Next.js 和 Caddy。Pull Request 必须通过 Backend、Frontend 和 Deployment artifacts 检查；`main` CI 成功后，GitHub Actions 使用固定 SSH host key 调用 `/opt/eiheizone/deploy.sh`。脚本只允许 fast-forward 更新，使用完整 commit SHA 标记镜像，等待 Compose 就绪并检查公网健康接口。
 
-生产 `.env`、部署状态、数据库与媒体卷保存在服务器且不进入 Git。`rollback.sh` 可以恢复上一稳定 commit，但不会删除 volumes 或逆向执行 Alembic Migration。初始化、回滚、图片清理、备份和恢复边界见 [`docs/operations.md`](docs/operations.md)。
+生产 `.env`、部署状态、数据库与媒体卷保存在服务器且不进入 Git。`rollback.sh` 可以恢复上一稳定 commit，但不会删除 volumes 或逆向执行 Alembic Migration。初始化、回滚、图片清理、备份和恢复边界见 `docs/operations.md`。
 
 ## 当前边界与已知风险
 

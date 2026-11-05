@@ -11,7 +11,7 @@ skinparam nodesep 45
 skinparam ranksep 55
 skinparam rectangle { BackgroundColor #F8FAFC; BorderColor #CBD5E1; FontColor #0F172A }
 skinparam database { BackgroundColor #EFF6FF; BorderColor #60A5FA; FontColor #0F172A }
-title EiheiZone v1.5.1 - Production Container Architecture
+title EiheiZone v1.5 - Production Container Architecture
 actor "Public / Family / Owner" as user
 rectangle "Caddy\nHTTPS / HTTP2 / HTTP3" as caddy
 rectangle "Next.js App Router\n页面、Server loader、交互" as frontend

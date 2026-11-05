@@ -1,8 +1,8 @@
 # 当前系统架构
 
-> 当前基线：`v1.5.1`（最后更新：2026-10-30）
+> 当前基线：`v1.5`（最后更新：2026-10-30）
 
-本文档是当前系统的架构摘要。历史完整设计分别保存在 [`versions/v1/02_v1_design.md`](versions/v1/02_v1_design.md) 和对应版本归档中；发生冲突时，以代码、Migration、Compose 配置和已验证的发布记录为准。
+本文档是当前系统的架构摘要。历史完整设计分别保存在 `versions/v1/02_v1_design.md` 和对应版本归档中；发生冲突时，以代码、Migration、Compose 配置和已验证的发布记录为准。
 
 ## 1. 系统上下文与权限
 
@@ -16,9 +16,9 @@
 
 ## 2. 生产容器架构
 
-![EiheiZone v1.5.1 容器架构](_附件_/architecture-v1.5.1.png)
+![EiheiZone 生产容器架构](assets/architecture-v1.5.png)
 
-图表文件：[`_附件_/architecture-v1.5.1.puml`](_附件_/architecture-v1.5.1.puml)（PlantUML）、[`_附件_/architecture-v1.5.1.svg`](_附件_/architecture-v1.5.1.svg)（SVG 矢量）与 [`_附件_/architecture-v1.5.1.png`](_附件_/architecture-v1.5.1.png)（PNG）。图只表达角色、运行容器、持久化资源和交付入口，不展开函数级实现。
+图表文件：[`assets/architecture-v1.5.puml`](assets/architecture-v1.5.puml)（PlantUML）、[`assets/architecture-v1.5.svg`](assets/architecture-v1.5.svg)（SVG 矢量）与 [`assets/architecture-v1.5.png`](assets/architecture-v1.5.png)（PNG）。图只表达角色、运行容器、持久化资源和交付入口，不展开函数级实现。
 
 - Caddy 暴露 `80/443`（包含 UDP 443），负责 HTTPS、HTTP/2/HTTP/3 和反向代理；
 - Next.js App Router 负责页面、Server loader、表单和浏览器交互；

@@ -1,16 +1,20 @@
-# V1.5.1 / 001 文档标准化与 v1.4 收口
+---
+id: T001
+title: 文档标准化与 v1.4 收口
+type: docs
+status: Accepted
+created: "2026-10-30"
+updated: "2026-11-05"
+branch: null
+---
 
-| 项目 | 内容 |
-| --- | --- |
-| 迭代编号 | `v1.5.1-001` |
-| 目标版本 | `v1.5.1` |
-| 状态 | `Accepted` |
-| 日期 | 2026-10-30 |
-| 分支 | `docs/v1.5.1-001-documentation-standardization` |
+# T001 文档标准化与 v1.4 收口
+
+> 原分支已合并删除。v1.5 尚未封箱，本任务留在 `docs/tasks/`，封箱时再移入 `docs/versions/`。正文保留 2026-10-30 的原始记录；路径变化以当前规范为准（`iterations/` → `tasks/`，`_附件_` → `assets/`）。
 
 ## 1. 背景与目标
 
-`v1.4` 的实现分散在多次提交与迭代记录中，根目录 README、现行架构和运维文档仍残留 `v1.1` 的过时描述，同时文档状态与模板字段偏多。本次迭代将 `v1.4` 已完成项与延期项分开归档，统一现行文档基线，并把迭代模板简化为「必填 + 按需裁剪」的轻量结构。
+`v1.4` 的实现分散在多次提交与历史记录中，根目录 README、现行架构和运维文档仍残留 `v1.1` 的过时描述，同时文档状态与模板字段偏多。本次任务将 `v1.4` 已完成项与延期项分开归档，统一现行文档基线，并把迭代模板简化为「必填 + 按需裁剪」的轻量结构。
 
 ## 2. 范围与不做事项
 
@@ -20,9 +24,9 @@
 - 将 `006` 转入 `docs/iterations/backlog/` 并标记 `Deferred`，明确保留未完成边界；
 - 简化迭代状态为 `In Progress` / `Accepted` / `Deferred` 三种，更新可裁剪迭代模板与 PR 模板；
 - 更新 `AGENTS.md`、`docs/README.md`、`docs/architecture.md`、`docs/operations.md`、`docs/development-process.md` 及三语根目录 README；
-- 在 `AGENTS.md` 的计划规则中要求：较大的技术方案选择要同时新增 ADR；
-- 扩大 `main` push 的部署忽略范围：根目录 README、`AGENTS.md`、PR 模板和 GitHub workflow 不再触发生产部署，见 [ADR-0002](../../adr/0002-skip-deploy-for-non-runtime-files.md)；
-- 补充 `v1.5.1` 生产容器架构图与迭代开发流转图（`.puml` 源码及 `.svg` / `.png` 渲染图）。
+- 在 `AGENTS.md` 的计划规则中补充较大技术方案的取舍要求（ADR 机制后来在 T003 中移除）；
+- 扩大 `main` push 的部署忽略范围：根目录 README、`AGENTS.md`、PR 模板和 GitHub workflow 不再触发生产部署；
+- 补充生产容器架构图与迭代开发流转图（`.puml` 源码及 `.svg` / `.png` 渲染图）。
 
 ### 不做事项
 
@@ -56,7 +60,7 @@
 
 | 检查 | 结果 | 证据 |
 | --- | --- | --- |
-| 短期分支检查 | `PASS` | `docs/v1.5.1-001-documentation-standardization` |
+| 短期分支检查 | `PASS` | 原分支已合并并删除 |
 | 文档与图表更新 | `PASS` | 现行文档、模板、三语 README 与 `docs/_附件_/` 图表已同步 |
 | Markdown 相对链接检查 | `PASS` | 仓库内 `docs/`、根目录 README 与 `.github/` 相对路径校验通过 |
 | `git diff --check` | `PASS` | 无空白错误或冲突标记 |
@@ -64,4 +68,4 @@
 
 ## 6. 遗留风险与后续事项
 
-- `006` 后续若启用每日 cron 与备份告警，需在目标版本新建迭代和分支，先合并部署脚本修复，再安装定时任务并补齐持续运行验收。
+- `006` 后续若启用每日 cron 与备份告警，按 `docs/standards/branching-and-tasks.md` 新建任务和分支，先确认部署脚本修复，再安装定时任务并补齐持续运行验收。
