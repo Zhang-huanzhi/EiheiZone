@@ -23,6 +23,10 @@ describe("AreaNavigation", () => {
 
     expect(screen.getByRole("navigation", { name: "家庭区域主导航" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "问答" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "家庭成员" })).toHaveAttribute(
+      "href",
+      "/family/members",
+    );
     expect(screen.getByRole("link", { name: "家庭首页" })).not.toHaveAttribute(
       "aria-current",
     );
@@ -41,6 +45,10 @@ describe("AreaNavigation", () => {
     expect(screen.getByRole("link", { name: "支出管理" })).toHaveAttribute(
       "aria-current",
       "page",
+    );
+    expect(screen.getByRole("link", { name: "成员空间管理" })).toHaveAttribute(
+      "href",
+      "/owner/members",
     );
     expect(screen.getByRole("link", { name: "管理工作台" })).not.toHaveAttribute(
       "aria-current",

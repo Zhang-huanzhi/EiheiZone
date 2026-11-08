@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.modules.auth.models import User, UserRole
+from app.modules.members.models import MemberImage, MemberImageStatus
 from app.modules.notifications.service import enqueue_media_cleanup_failure
 from app.modules.posts.models import MediaCleanupRun, Post, PostImage, PostImageStatus, PostVisibility
 
@@ -206,7 +207,7 @@ def get_image_for_reader(db: Session, *, image_id: UUID, user: User | None) -> P
     return None
 
 
-def image_path(image: PostImage) -> Path:
+def image_path(image: PostImage | MemberImage) -> Path:
     """Resolve a database storage key without allowing traversal outside media root."""
 
     root = get_settings().media_root.resolve()
@@ -246,7 +247,7 @@ def cleanup_orphan_images(
     now = datetime.now(UTC)
     cutoff = now - grace_period
     stats = CleanupStats()
-    images = list(
+    post_images = list(
         db.scalars(
             select(PostImage).where(
                 (PostImage.status == PostImageStatus.CLEANUP_PENDING)
@@ -254,8 +255,22 @@ def cleanup_orphan_images(
             ).order_by(PostImage.created_at)
         )
     )
+    member_images = list(
+        db.scalars(
+            select(MemberImage).where(
+                (MemberImage.status == MemberImageStatus.CLEANUP_PENDING)
+                | ((MemberImage.status == MemberImageStatus.PENDING) & (MemberImage.created_at < cutoff))
+            ).order_by(MemberImage.created_at)
+        )
+    )
+    images: list[PostImage | MemberImage] = sorted(
+        [*post_images, *member_images],
+        key=lambda item: item.created_at,
+    )
     stats.pending_candidates = len(images)
-    known_keys = set(db.scalars(select(PostImage.storage_key)))
+    known_keys = set(db.scalars(select(PostImage.storage_key))) | set(
+        db.scalars(select(MemberImage.storage_key))
+    )
     files: list[Path] = []
     root = get_settings().media_root
     if scan_orphans and root.exists():
@@ -279,7 +294,11 @@ def cleanup_orphan_images(
                 if image.cleanup_attempts:
                     stats.retry_count += 1
             except OSError as error:
-                image.status = PostImageStatus.CLEANUP_PENDING
+                image.status = (
+                    MemberImageStatus.CLEANUP_PENDING
+                    if isinstance(image, MemberImage)
+                    else PostImageStatus.CLEANUP_PENDING
+                )
                 image.cleanup_attempts += 1
                 image.last_cleanup_at = now
                 image.last_cleanup_error = str(error)[:500]

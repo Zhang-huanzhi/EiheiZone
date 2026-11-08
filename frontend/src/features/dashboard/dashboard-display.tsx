@@ -5,6 +5,7 @@ import {
   FileText,
   MessageCircleQuestion,
   ReceiptText,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -233,6 +234,12 @@ export function FamilyDashboard({ data }: { data: DashboardData }) {
 
 const managementItems = [
   {
+    href: "/owner/members",
+    icon: Users,
+    title: "成员空间管理",
+    description: "维护家庭成员数字档案、风格与岁月相册",
+  },
+  {
     href: "/owner/posts",
     icon: FileText,
     title: "近况管理",
@@ -278,7 +285,7 @@ export function OwnerWorkspace({ data }: { data: DashboardData }) {
             提出问题
           </Link>
         </header>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
           {managementItems.map(({ href, icon: Icon, title, description }) => (
             <Link
               className="group min-w-0 rounded-md border border-border p-4 transition-colors hover:border-foreground/30 hover:bg-muted/50"
