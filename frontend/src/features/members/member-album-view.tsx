@@ -543,7 +543,8 @@ export function MemberAlbumView({
                       alt={photo.story ?? `${album.title} 第 ${index + 1} 张照片`}
                       className="h-full w-full object-contain"
                       loading="lazy"
-                      src={photo.image.url}
+                      decoding="async"
+                      src={photo.image.thumbnail_url || photo.image.url}
                     />
                   </button>
 

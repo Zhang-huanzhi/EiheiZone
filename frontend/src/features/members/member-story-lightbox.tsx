@@ -3,6 +3,7 @@
 import { Calendar, MapPin, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { cn } from "@/lib/utils";
 import type { MemberPhotoRecord } from "@/features/members/member-types";
 
 type MemberStoryLightboxProps = {
@@ -24,6 +25,7 @@ export function MemberStoryLightbox({
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [loadedPhotoId, setLoadedPhotoId] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -52,6 +54,7 @@ export function MemberStoryLightbox({
   }, [isConfirmingDelete, onClose, photos.length]);
 
   const currentPhoto = photos[index];
+  const isFullLoaded = loadedPhotoId === currentPhoto?.id;
   if (!currentPhoto) {
     return null;
   }
@@ -172,11 +175,29 @@ export function MemberStoryLightbox({
           </button>
         ) : null}
 
-        <div className="flex max-h-[68vh] flex-1 items-center justify-center lg:max-h-[80vh]">
+        <div className="relative flex max-h-[68vh] flex-1 items-center justify-center lg:max-h-[80vh]">
+          {!isFullLoaded && currentPhoto.image.thumbnail_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt=""
+              aria-hidden="true"
+              className="max-h-[66vh] max-w-full rounded-md object-contain blur-xs filter transition-opacity duration-300 lg:max-h-[78vh]"
+              src={currentPhoto.image.thumbnail_url}
+            />
+          ) : null}
+
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             alt={currentPhoto.story ?? "照片"}
-            className="max-h-[66vh] max-w-full rounded-md object-contain lg:max-h-[78vh]"
+            className={cn(
+              "max-h-[66vh] max-w-full rounded-md object-contain transition-opacity duration-300 lg:max-h-[78vh]",
+              isFullLoaded
+                ? "opacity-100"
+                : currentPhoto.image.thumbnail_url
+                  ? "absolute inset-0 m-auto opacity-0"
+                  : "opacity-100",
+            )}
+            onLoad={() => setLoadedPhotoId(currentPhoto.id)}
             src={currentPhoto.image.url}
           />
         </div>

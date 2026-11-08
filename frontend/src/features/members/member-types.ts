@@ -12,6 +12,7 @@ export type MemberLayoutPreference = "profile_first" | "gallery_first";
 export type MemberImageRecord = {
   id: string;
   url: string;
+  thumbnail_url?: string;
   width: number;
   height: number;
 };

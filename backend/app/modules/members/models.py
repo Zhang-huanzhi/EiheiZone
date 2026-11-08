@@ -116,6 +116,10 @@ class MemberImage(Base):
     def url(self) -> str:
         return f"/api/v1/media/member-images/{self.id}"
 
+    @property
+    def thumbnail_url(self) -> str:
+        return f"/api/v1/media/member-images/{self.id}?variant=thumb"
+
 
 class MemberProfile(Base):
     """Structured bio, Q&A tags, and theme customization for one active User."""
