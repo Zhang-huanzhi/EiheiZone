@@ -61,6 +61,7 @@ class MemberImageResponse(BaseModel):
 
     id: UUID
     url: str
+    thumbnail_url: str
     width: int
     height: int
 

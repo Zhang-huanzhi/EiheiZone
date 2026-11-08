@@ -28,6 +28,8 @@ MAX_PIXELS = 75 * 1024 * 1024
 MAX_TOTAL_SIZE = 500 * 1024 * 1024
 ALLOWED_FORMATS = {"JPEG", "MPO", "PNG", "WEBP", "AVIF", "GIF", "BMP", "DIB", "TIFF"}
 _HEIC_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1"}
+THUMBNAIL_MAX_EDGE = 480
+THUMBNAIL_QUALITY = 78
 
 
 def _is_heic_header(data: bytes) -> bool:
@@ -105,6 +107,11 @@ def upload_member_image(
             processed.save(output, format="WEBP", quality=82, method=4)
             encoded = output.getvalue()
             processed_width, processed_height = processed.size
+            thumb_image = processed.copy()
+            thumb_image.thumbnail((THUMBNAIL_MAX_EDGE, THUMBNAIL_MAX_EDGE), Image.Resampling.LANCZOS)
+            thumb_output = BytesIO()
+            thumb_image.save(thumb_output, format="WEBP", quality=THUMBNAIL_QUALITY, method=4)
+            thumb_encoded = thumb_output.getvalue()
     except AppError:
         raise
     except Image.DecompressionBombError as error:
@@ -125,6 +132,8 @@ def upload_member_image(
     path = get_settings().media_root / relative_path
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(encoded)
+    thumb_path = path.with_name(f"{path.stem}_thumb.webp")
+    thumb_path.write_bytes(thumb_encoded)
 
     image = MemberImage(
         owner_id=actor.id,
@@ -143,6 +152,7 @@ def upload_member_image(
     except Exception:
         db.rollback()
         path.unlink(missing_ok=True)
+        thumb_path.unlink(missing_ok=True)
         raise
     return image
 
@@ -282,6 +292,45 @@ def member_image_path(image: MemberImage) -> Path:
     return path
 
 
+def member_image_thumbnail_path(image: MemberImage) -> Path:
+    """Resolve the companion thumbnail file path for a member image."""
+
+    full_path = member_image_path(image)
+    return full_path.with_name(f"{full_path.stem}_thumb.webp")
+
+
+def get_or_create_member_image_thumbnail(image: MemberImage) -> Path:
+    """Return the companion thumbnail path, generating and saving it on disk if absent."""
+
+    thumb_path = member_image_thumbnail_path(image)
+    if thumb_path.is_file():
+        return thumb_path
+
+    full_path = member_image_path(image)
+    if not full_path.is_file():
+        raise AppError(status_code=404, code="IMAGE_NOT_FOUND", message="Image was not found")
+
+    try:
+        with Image.open(full_path) as source:
+            has_alpha = source.mode in {"RGBA", "LA"} or (
+                source.mode == "P" and "transparency" in source.info
+            )
+            processed = source.convert("RGBA" if has_alpha else "RGB")
+            processed.thumbnail((THUMBNAIL_MAX_EDGE, THUMBNAIL_MAX_EDGE), Image.Resampling.LANCZOS)
+            output = BytesIO()
+            processed.save(output, format="WEBP", quality=THUMBNAIL_QUALITY, method=4)
+            thumb_path.parent.mkdir(parents=True, exist_ok=True)
+            thumb_path.write_bytes(output.getvalue())
+    except (UnidentifiedImageError, OSError, ValueError) as error:
+        raise AppError(
+            status_code=500,
+            code="THUMBNAIL_GENERATION_FAILED",
+            message="Failed to generate thumbnail for member image",
+        ) from error
+
+    return thumb_path
+
+
 def delete_detached_member_images(db: Session, images: list[MemberImage]) -> None:
     """Remove detached member image files, retaining failed records for worker retry."""
 
@@ -290,6 +339,7 @@ def delete_detached_member_images(db: Session, images: list[MemberImage]) -> Non
     for image in images:
         try:
             member_image_path(image).unlink(missing_ok=True)
+            member_image_thumbnail_path(image).unlink(missing_ok=True)
             db.delete(image)
         except OSError:
             image.status = MemberImageStatus.CLEANUP_PENDING

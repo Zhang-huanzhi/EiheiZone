@@ -8,7 +8,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +61,28 @@ export function MemberSpaceView({
 
   // Lightbox state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  // Progressive rendering state
+  const [visibleCount, setVisibleCount] = useState(24);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const visiblePhotos = useMemo(() => photos.slice(0, visibleCount), [photos, visibleCount]);
+
+  useEffect(() => {
+    if (visibleCount >= photos.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + 24, photos.length));
+        }
+      },
+      { rootMargin: "400px" },
+    );
+    const el = loadMoreRef.current;
+    if (el) observer.observe(el);
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [visibleCount, photos.length]);
 
   const theme = getMemberAccentTheme(space.accent_color);
   const signature = space.about_me || space.status_text;
@@ -438,47 +460,69 @@ export function MemberSpaceView({
             ) : null}
           </div>
         ) : (
-          <div className="columns-2 gap-2.5 space-y-2.5 sm:columns-3 sm:gap-4 sm:space-y-4 lg:columns-4">
-            {photos.map((photo, index) => (
-              <div
-                className="group relative cursor-pointer break-inside-avoid overflow-hidden rounded-lg border border-border bg-card transition-all hover:border-foreground/30 hover:shadow-sm sm:rounded-xl"
-                key={photo.id}
-                onClick={() => setLightboxIndex(index)}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt={photo.story ?? "照片"}
-                  className="w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                  loading="lazy"
-                  src={photo.image.url}
-                />
+          <>
+            <div className="columns-2 gap-2.5 space-y-2.5 sm:columns-3 sm:gap-4 sm:space-y-4 lg:columns-4">
+              {visiblePhotos.map((photo, index) => (
+                <div
+                  className="group relative cursor-pointer break-inside-avoid overflow-hidden rounded-lg border border-border bg-card transition-all hover:border-foreground/30 hover:shadow-sm sm:rounded-xl"
+                  key={photo.id}
+                  onClick={() => setLightboxIndex(index)}
+                >
+                  <div
+                    className="relative w-full overflow-hidden bg-muted/40"
+                    style={{
+                      aspectRatio:
+                        photo.image.width && photo.image.height
+                          ? `${photo.image.width} / ${photo.image.height}`
+                          : "4 / 3",
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      alt={photo.story ?? "照片"}
+                      className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      decoding="async"
+                      loading="lazy"
+                      src={photo.image.thumbnail_url || photo.image.url}
+                    />
+                  </div>
 
-                {(photo.taken_at_label || photo.location || photo.story) ? (
-                  <div className="space-y-1 p-2 text-[11px] sm:p-2.5 sm:text-xs">
-                    <div className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
-                      {photo.taken_at_label ? (
-                        <span className="inline-flex items-center gap-0.5">
-                          <Calendar className="size-3" />
-                          {photo.taken_at_label}
-                        </span>
-                      ) : null}
-                      {photo.location ? (
-                        <span className="inline-flex items-center gap-0.5">
-                          <MapPin className="size-3" />
-                          {photo.location}
-                        </span>
+                  {(photo.taken_at_label || photo.location || photo.story) ? (
+                    <div className="space-y-1 p-2 text-[11px] sm:p-2.5 sm:text-xs">
+                      <div className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
+                        {photo.taken_at_label ? (
+                          <span className="inline-flex items-center gap-0.5">
+                            <Calendar className="size-3" />
+                            {photo.taken_at_label}
+                          </span>
+                        ) : null}
+                        {photo.location ? (
+                          <span className="inline-flex items-center gap-0.5">
+                            <MapPin className="size-3" />
+                            {photo.location}
+                          </span>
+                        ) : null}
+                      </div>
+                      {photo.story ? (
+                        <p className="line-clamp-2 text-foreground/90">
+                          {photo.story}
+                        </p>
                       ) : null}
                     </div>
-                    {photo.story ? (
-                      <p className="line-clamp-2 text-foreground/90">
-                        {photo.story}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            {visibleCount < photos.length ? (
+              <div
+                className="flex items-center justify-center py-6 text-xs text-muted-foreground"
+                ref={loadMoreRef}
+              >
+                <span>正在加载更多照片…（已显示 {visibleCount}/{photos.length}）</span>
               </div>
-            ))}
-          </div>
+            ) : null}
+          </>
         )}
       </section>
 

@@ -26,6 +26,7 @@
 - `T003` 文档体系与分支规范重构（`Accepted`）：`tasks/003-doc-governance.md`
 - `T004` 家庭成员展示空间（members）模块（`Accepted`）：`tasks/004-member-spaces.md`
 - `T005` 图片上传自适应缩放、多格式兼容与友好中文反馈优化（`Accepted`）：`tasks/005-smart-image-upload.md`
+- `T006` 家庭成员图库加载性能优化（`In Progress`）：`tasks/006-gallery-perf-thumbnails.md`
 
 任务状态只有 `In Progress`、`Accepted`、`Deferred`；完整规则见 `standards/branching-and-tasks.md`。
 

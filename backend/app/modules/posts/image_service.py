@@ -307,9 +307,12 @@ def cleanup_orphan_images(
         key=lambda item: item.created_at,
     )
     stats.pending_candidates = len(images)
-    known_keys = set(db.scalars(select(PostImage.storage_key))) | set(
-        db.scalars(select(MemberImage.storage_key))
-    )
+    member_keys = set(db.scalars(select(MemberImage.storage_key)))
+    member_thumb_keys = {
+        key[:-5] + "_thumb.webp" if key.endswith(".webp") else f"{key}_thumb.webp"
+        for key in member_keys
+    }
+    known_keys = set(db.scalars(select(PostImage.storage_key))) | member_keys | member_thumb_keys
     files: list[Path] = []
     root = get_settings().media_root
     if scan_orphans and root.exists():
@@ -327,6 +330,9 @@ def cleanup_orphan_images(
                 continue
             try:
                 image_path(image).unlink(missing_ok=True)
+                if isinstance(image, MemberImage):
+                    thumb_path = image_path(image).with_name(f"{image_path(image).stem}_thumb.webp")
+                    thumb_path.unlink(missing_ok=True)
                 db.delete(image)
                 stats.files_deleted += 1
                 stats.records_deleted += 1
