@@ -14,6 +14,13 @@ import type {
   MemberSpaceRecord,
 } from "@/features/members/member-types";
 import { ApiRequestError } from "@/lib/api/client";
+import {
+  IMAGE_ACCEPT_ATTR,
+  IMAGE_UPLOAD_HINT,
+  formatImageUploadError,
+  prepareImageForUpload,
+  validateImageFile,
+} from "@/lib/image-upload";
 import { cn } from "@/lib/utils";
 
 type MemberProfileEditorProps = {
@@ -23,8 +30,6 @@ type MemberProfileEditorProps = {
 };
 
 const MAX_ABOUT_ME_LENGTH = 500;
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export function MemberProfileEditor({
   space,
@@ -53,12 +58,9 @@ export function MemberProfileEditor({
       return;
     }
     setErrorMessage(null);
-    if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
-      setErrorMessage("仅支持 JPG、PNG 或 WebP 格式的图片。");
-      return;
-    }
-    if (file.size > MAX_IMAGE_SIZE) {
-      setErrorMessage("单张图片大小不能超过 5 MB。");
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      setErrorMessage(validationError);
       return;
     }
 
@@ -69,16 +71,15 @@ export function MemberProfileEditor({
     }
 
     try {
-      const uploaded = await uploadMemberImage(space.user_id, file, file.name);
+      const { blob, filename } = await prepareImageForUpload(file);
+      const uploaded = await uploadMemberImage(space.user_id, blob, filename);
       if (slot === "avatar") {
         setAvatarImage(uploaded);
       } else {
         setBannerImage(uploaded);
       }
     } catch (error) {
-      setErrorMessage(
-        error instanceof ApiRequestError ? error.message : "图片上传失败，请稍后重试。",
-      );
+      setErrorMessage(formatImageUploadError(error, file.name));
     } finally {
       if (slot === "avatar") {
         setIsUploadingAvatar(false);
@@ -224,7 +225,7 @@ export function MemberProfileEditor({
             </div>
             <div className="space-y-1">
               <input
-                accept="image/jpeg,image/png,image/webp"
+                accept={IMAGE_ACCEPT_ATTR}
                 className="text-xs text-muted-foreground file:mr-2 file:rounded-md file:border file:border-border file:bg-muted file:px-2.5 file:py-1 file:text-xs file:font-medium hover:file:bg-muted/80"
                 disabled={isUploadingAvatar}
                 onChange={(event) =>
@@ -249,7 +250,7 @@ export function MemberProfileEditor({
           <label className="block text-sm font-medium">顶部横幅封面</label>
           <div className="space-y-1.5">
             <input
-              accept="image/jpeg,image/png,image/webp"
+              accept={IMAGE_ACCEPT_ATTR}
               className="text-xs text-muted-foreground file:mr-2 file:rounded-md file:border file:border-border file:bg-muted file:px-2.5 file:py-1 file:text-xs file:font-medium hover:file:bg-muted/80"
               disabled={isUploadingBanner}
               onChange={(event) =>
@@ -269,6 +270,8 @@ export function MemberProfileEditor({
           </div>
         </div>
       </div>
+
+      <p className="text-xs text-muted-foreground">{IMAGE_UPLOAD_HINT}</p>
 
       <div className="flex justify-end gap-2 border-t border-border pt-4">
         <Button onClick={onCancel} size="sm" type="button" variant="outline">

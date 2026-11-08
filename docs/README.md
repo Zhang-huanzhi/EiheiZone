@@ -2,7 +2,7 @@
 
 本目录保存 EiheiZone 的正式工程文档。根目录下的现行文档随系统变化直接更新；`tasks/` 保存活跃任务，`versions/` 保存已封箱并冻结的历史版本；源代码、Migration 和自动化测试以仓库实现为准。
 
-> 当前文档体系基线：T004（2026-11-08）；产品基线 `v1.5`。
+> 当前文档体系基线：T005（2026-11-08）；产品基线 `v1.5`。
 
 ## 1. 现行文档
 
@@ -24,7 +24,8 @@
 - `T001` 文档标准化与 v1.4 收口（`Accepted`，等待 v1.5 封箱）：`tasks/001-documentation-standardization.md`
 - `T002` COS 基础数据防灾（`Deferred`，原 V1.4 / 006）：`tasks/002-basic-disaster-recovery.md`
 - `T003` 文档体系与分支规范重构（`Accepted`）：`tasks/003-doc-governance.md`
-- `T004` 家庭成员展示空间（members）模块（`In Progress`）：`tasks/004-member-spaces.md`
+- `T004` 家庭成员展示空间（members）模块（`Accepted`）：`tasks/004-member-spaces.md`
+- `T005` 图片上传自适应缩放、多格式兼容与友好中文反馈优化（`Accepted`）：`tasks/005-smart-image-upload.md`
 
 任务状态只有 `In Progress`、`Accepted`、`Deferred`；完整规则见 `standards/branching-and-tasks.md`。
 

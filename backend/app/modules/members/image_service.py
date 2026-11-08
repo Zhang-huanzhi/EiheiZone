@@ -22,11 +22,18 @@ from app.modules.members.models import (
 )
 
 MAX_BATCH_PHOTOS = 9
-MAX_FILE_SIZE = 5 * 1024 * 1024
-MAX_LONG_EDGE = 4096
-MAX_PIXELS = 16 * 1024 * 1024
-MAX_TOTAL_SIZE = 30 * 1024 * 1024
-ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
+MAX_FILE_SIZE = 20 * 1024 * 1024
+MAX_LONG_EDGE = 16384
+MAX_PIXELS = 75 * 1024 * 1024
+MAX_TOTAL_SIZE = 60 * 1024 * 1024
+ALLOWED_FORMATS = {"JPEG", "MPO", "PNG", "WEBP", "AVIF", "GIF", "BMP", "DIB", "TIFF"}
+_HEIC_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1"}
+
+
+def _is_heic_header(data: bytes) -> bool:
+    """Detect ISO Base Media File Format headers used by Apple HEIC/HEIF photos."""
+
+    return len(data) >= 12 and data[4:8] == b"ftyp" and data[8:12].lower() in _HEIC_BRANDS
 
 
 def upload_member_image(
@@ -56,23 +63,38 @@ def upload_member_image(
         raise AppError(
             status_code=400,
             code="IMAGE_TOO_LARGE",
-            message="Image must be 5 MB or smaller",
+            message="单张图片大小不能超过 20 MB。",
         )
     if not data:
         raise AppError(
             status_code=400,
             code="INVALID_IMAGE",
-            message="Image file is empty",
+            message="图片文件为空，请重新选择。",
+        )
+    if _is_heic_header(data):
+        raise AppError(
+            status_code=400,
+            code="INVALID_IMAGE",
+            message="检测到苹果 HEIC 原图格式，请先在系统相册中导出为 JPG/PNG 后再上传。",
         )
 
     try:
         with Image.open(BytesIO(data)) as source:
-            if source.format not in ALLOWED_FORMATS:
-                raise ValueError("unsupported image format")
-            source.load()
+            fmt = (source.format or "").upper()
+            if fmt not in ALLOWED_FORMATS:
+                raise AppError(
+                    status_code=400,
+                    code="INVALID_IMAGE",
+                    message=f"不支持该图片格式（{fmt or '未知'}），请选择 JPG、PNG、WebP、AVIF、GIF 或 BMP 图片。",
+                )
             width, height = source.size
             if max(width, height) > MAX_LONG_EDGE or width * height > MAX_PIXELS:
-                raise ValueError("image dimensions exceed limits")
+                raise AppError(
+                    status_code=400,
+                    code="INVALID_IMAGE",
+                    message=f"图片分辨率过高（当前 {width}×{height}，最高支持约 7500 万像素），请适当裁剪后重试。",
+                )
+            source.load()
             transposed = ImageOps.exif_transpose(source)
             has_alpha = transposed.mode in {"RGBA", "LA"} or (
                 transposed.mode == "P" and "transparency" in transposed.info
@@ -83,11 +105,19 @@ def upload_member_image(
             processed.save(output, format="WEBP", quality=82, method=4)
             encoded = output.getvalue()
             processed_width, processed_height = processed.size
+    except AppError:
+        raise
+    except Image.DecompressionBombError as error:
+        raise AppError(
+            status_code=400,
+            code="INVALID_IMAGE",
+            message="图片分辨率过高（超过安全上限），请适当裁剪后重试。",
+        ) from error
     except (UnidentifiedImageError, OSError, ValueError) as error:
         raise AppError(
             status_code=400,
             code="INVALID_IMAGE",
-            message="The uploaded file is not a supported image",
+            message="图片文件已损坏或格式不受支持，请选择 JPG、PNG 或 WebP 图片重试。",
         ) from error
 
     now = datetime.now(UTC)
@@ -186,7 +216,7 @@ def attach_batch_album_images(
         raise AppError(
             status_code=400,
             code="IMAGE_TOTAL_TOO_LARGE",
-            message="Album batch images must total 30 MB or less",
+            message="Album batch images must total 60 MB or less",
         )
     by_id: dict[UUID, MemberImage] = {}
     for image in images:

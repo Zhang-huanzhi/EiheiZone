@@ -23,7 +23,13 @@ import type {
   MemberPhotoRecord,
   MemberSpaceRecord,
 } from "@/features/members/member-types";
-import { ApiRequestError } from "@/lib/api/client";
+import {
+  IMAGE_ACCEPT_ATTR,
+  IMAGE_UPLOAD_HINT,
+  formatImageUploadError,
+  prepareImageForUpload,
+  validateImageFile,
+} from "@/lib/image-upload";
 import { cn } from "@/lib/utils";
 
 type MemberSpaceViewProps = {
@@ -32,8 +38,6 @@ type MemberSpaceViewProps = {
 };
 
 const MAX_BATCH_PHOTOS = 9;
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export function MemberSpaceView({
   initialSpace,
@@ -68,12 +72,9 @@ export function MemberSpaceView({
     }
 
     for (const file of incoming) {
-      if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
-        setUploadError("仅支持 JPG、PNG 或 WebP 格式。");
-        return;
-      }
-      if (file.size > MAX_IMAGE_SIZE) {
-        setUploadError("单张照片大小不能超过 5 MB。");
+      const validationError = validateImageFile(file);
+      if (validationError) {
+        setUploadError(validationError);
         return;
       }
     }
@@ -97,13 +98,16 @@ export function MemberSpaceView({
 
     setUploadError(null);
     setIsSubmittingPhotos(true);
+    let currentFileName: string | undefined;
     try {
       const uploadedPayload = [];
       for (const file of selectedFiles) {
+        currentFileName = file.name;
+        const { blob, filename } = await prepareImageForUpload(file);
         const uploadedImg = await uploadMemberImage(
           space.user_id,
-          file,
-          file.name,
+          blob,
+          filename,
         );
         uploadedPayload.push({
           image_id: uploadedImg.id,
@@ -123,11 +127,7 @@ export function MemberSpaceView({
       setSelectedFiles([]);
       setIsUploadingPhotos(false);
     } catch (error) {
-      setUploadError(
-        error instanceof ApiRequestError
-          ? error.message
-          : "上传照片失败，请重试。",
-      );
+      setUploadError(formatImageUploadError(error, currentFileName));
     } finally {
       setIsSubmittingPhotos(false);
     }
@@ -320,7 +320,7 @@ export function MemberSpaceView({
             onSubmit={handleUploadSubmit}
           >
             {uploadError ? (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
                 {uploadError}
               </p>
             ) : null}
@@ -330,12 +330,15 @@ export function MemberSpaceView({
                 选择照片（单次最多 9 张）
               </label>
               <input
-                accept="image/jpeg,image/png,image/webp"
+                accept={IMAGE_ACCEPT_ATTR}
                 className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-muted/80"
                 multiple
                 onChange={(e) => handleSelectFiles(e.target.files)}
                 type="file"
               />
+              <p className="text-xs text-muted-foreground">
+                {IMAGE_UPLOAD_HINT}
+              </p>
 
               {selectedFiles.length > 0 ? (
                 <div className="mt-3 flex flex-wrap gap-2">
