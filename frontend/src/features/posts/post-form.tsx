@@ -9,6 +9,12 @@ import { PostImageEditor, type EditablePostImage } from "@/features/posts/post-i
 import type { PostRecord, PostVisibility } from "@/features/posts/post-types";
 import type { PostUpdateInput } from "@/features/posts/post-types";
 import { ApiRequestError } from "@/lib/api/client";
+import {
+  IMAGE_ACCEPT_ATTR,
+  IMAGE_UPLOAD_HINT,
+  prepareImageForUpload,
+  validateImageFile,
+} from "@/lib/image-upload";
 import { useHydrated } from "@/lib/use-hydrated";
 
 type PostFormProps = {
@@ -21,8 +27,6 @@ type FieldErrors = Partial<Record<"title" | "body" | "visibility", string>>;
 const MAX_TITLE_LENGTH = 120;
 const MAX_BODY_LENGTH = 10000;
 const MAX_IMAGES = 9;
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFormProps) {
   const router = useRouter();
@@ -125,6 +129,8 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
         } else if (error.status === 422) {
           setFieldErrors(toFieldErrors(error));
           setFormError("请检查标记的字段。 ");
+        } else if (error.status === 400 && (error.code === "INVALID_IMAGE" || error.code === "IMAGE_TOO_LARGE")) {
+          setFormError(error.message);
         } else {
           setFormError("暂时无法保存，请重试。 ");
         }
@@ -155,7 +161,7 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
       <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="post-images">图片（最多 9 张）</label>
           <input
-            accept="image/jpeg,image/png,image/webp"
+            accept={IMAGE_ACCEPT_ATTR}
             className="block w-full text-sm"
             id="post-images"
             multiple
@@ -165,10 +171,12 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
                 setFormError("最多选择 9 张图片。");
                 return;
               }
-              const invalid = files.find((file) => !ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_SIZE);
-              if (invalid) {
-                setFormError("仅支持 JPG、PNG、WebP，单张不超过 5 MB。");
-                return;
+              for (const file of files) {
+                const validationError = validateImageFile(file);
+                if (validationError) {
+                  setFormError(validationError);
+                  return;
+                }
               }
               setFormError(null);
               setDraftImages((current) => [
@@ -185,6 +193,7 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
             }}
             type="file"
           />
+          <p className="text-xs text-muted-foreground">{IMAGE_UPLOAD_HINT}</p>
           {draftImages.length ? (
             <>
               <p className="text-sm text-muted-foreground">当前共有 {draftImages.length} 张图片，可调整顺序或删除。</p>
@@ -247,41 +256,31 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
 }
 
 async function uploadSelectedImages(files: File[]): Promise<string[]> {
-  const compressed = await Promise.all(files.map((file) => compressImage(file)));
+  const prepared = await Promise.all(files.map((file) => prepareImageForUpload(file)));
   const ids: string[] = [];
-  for (let start = 0; start < compressed.length; start += 3) {
-    const batch = compressed.slice(start, start + 3);
-    const uploaded = await Promise.all(batch.map((file) => uploadWithRetry(file)));
+  for (let start = 0; start < prepared.length; start += 3) {
+    const batch = prepared.slice(start, start + 3);
+    const uploaded = await Promise.all(batch.map((item) => uploadWithRetry(item.blob, item.filename)));
     ids.push(...uploaded.map((image) => image.id));
   }
   return ids;
 }
 
-async function uploadWithRetry(file: Blob): Promise<Awaited<ReturnType<typeof uploadPostImage>>> {
+async function uploadWithRetry(file: Blob, filename: string): Promise<Awaited<ReturnType<typeof uploadPostImage>>> {
   const delays = [0, 1000, 3000];
   let lastError: unknown;
   for (const delay of delays) {
     if (delay) await new Promise((resolve) => window.setTimeout(resolve, delay));
     try {
-      return await uploadPostImage(file);
+      return await uploadPostImage(file, filename);
     } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 400) {
+        throw error;
+      }
       lastError = error;
     }
   }
   throw lastError;
-}
-
-async function compressImage(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 2048 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("image compression failed")), "image/webp", 0.82);
-  });
 }
 
 function toFieldErrors(error: ApiRequestError): FieldErrors {

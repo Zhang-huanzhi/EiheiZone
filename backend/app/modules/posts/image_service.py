@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import UploadFile
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -19,11 +19,12 @@ from app.modules.notifications.service import enqueue_media_cleanup_failure
 from app.modules.posts.models import MediaCleanupRun, Post, PostImage, PostImageStatus, PostVisibility
 
 MAX_IMAGES = 9
-MAX_FILE_SIZE = 5 * 1024 * 1024
-MAX_LONG_EDGE = 4096
-MAX_PIXELS = 16 * 1024 * 1024
-MAX_TOTAL_SIZE = 30 * 1024 * 1024
-ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
+MAX_FILE_SIZE = 20 * 1024 * 1024
+MAX_LONG_EDGE = 16384
+MAX_PIXELS = 75 * 1024 * 1024
+MAX_TOTAL_SIZE = 60 * 1024 * 1024
+ALLOWED_FORMATS = {"JPEG", "MPO", "PNG", "WEBP", "AVIF", "GIF", "BMP", "DIB", "TIFF"}
+_HEIC_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1"}
 ORPHAN_GRACE = timedelta(hours=24)
 
 
@@ -41,6 +42,12 @@ class CleanupStats:
         return asdict(self)
 
 
+def _is_heic_header(data: bytes) -> bool:
+    """Detect ISO Base Media File Format headers used by Apple HEIC/HEIF photos."""
+
+    return len(data) >= 12 and data[4:8] == b"ftyp" and data[8:12].lower() in _HEIC_BRANDS
+
+
 def upload_image(db: Session, *, user: User, upload: UploadFile) -> PostImage:
     """Validate one Family or Owner upload and persist a sanitized pending WebP."""
 
@@ -52,32 +59,64 @@ def upload_image(db: Session, *, user: User, upload: UploadFile) -> PostImage:
         )
     data = upload.file.read(MAX_FILE_SIZE + 1)
     if len(data) > MAX_FILE_SIZE:
-        raise AppError(status_code=400, code="IMAGE_TOO_LARGE", message="Image must be 5 MB or smaller")
+        raise AppError(
+            status_code=400,
+            code="IMAGE_TOO_LARGE",
+            message="单张图片大小不能超过 20 MB。",
+        )
     if not data:
-        raise AppError(status_code=400, code="INVALID_IMAGE", message="Image file is empty")
+        raise AppError(
+            status_code=400,
+            code="INVALID_IMAGE",
+            message="图片文件为空，请重新选择。",
+        )
+    if _is_heic_header(data):
+        raise AppError(
+            status_code=400,
+            code="INVALID_IMAGE",
+            message="检测到苹果 HEIC 原图格式，请先在系统相册中导出为 JPG/PNG 后再上传。",
+        )
 
     try:
         with Image.open(BytesIO(data)) as source:
-            if source.format not in ALLOWED_FORMATS:
-                raise ValueError("unsupported image format")
-            source.load()
+            fmt = (source.format or "").upper()
+            if fmt not in ALLOWED_FORMATS:
+                raise AppError(
+                    status_code=400,
+                    code="INVALID_IMAGE",
+                    message=f"不支持该图片格式（{fmt or '未知'}），请选择 JPG、PNG、WebP、AVIF、GIF 或 BMP 图片。",
+                )
             width, height = source.size
             if max(width, height) > MAX_LONG_EDGE or width * height > MAX_PIXELS:
-                raise ValueError("image dimensions exceed limits")
-            has_alpha = source.mode in {"RGBA", "LA"} or (
-                source.mode == "P" and "transparency" in source.info
+                raise AppError(
+                    status_code=400,
+                    code="INVALID_IMAGE",
+                    message=f"图片分辨率过高（当前 {width}×{height}，最高支持约 7500 万像素），请适当裁剪后重试。",
+                )
+            source.load()
+            transposed = ImageOps.exif_transpose(source)
+            has_alpha = transposed.mode in {"RGBA", "LA"} or (
+                transposed.mode == "P" and "transparency" in transposed.info
             )
-            processed = source.convert("RGBA" if has_alpha else "RGB")
+            processed = transposed.convert("RGBA" if has_alpha else "RGB")
             processed.thumbnail((2048, 2048), Image.Resampling.LANCZOS)
             output = BytesIO()
             processed.save(output, format="WEBP", quality=82, method=4)
             encoded = output.getvalue()
             processed_width, processed_height = processed.size
+    except AppError:
+        raise
+    except Image.DecompressionBombError as error:
+        raise AppError(
+            status_code=400,
+            code="INVALID_IMAGE",
+            message="图片分辨率过高（超过安全上限），请适当裁剪后重试。",
+        ) from error
     except (UnidentifiedImageError, OSError, ValueError) as error:
         raise AppError(
             status_code=400,
             code="INVALID_IMAGE",
-            message="The uploaded file is not a supported image",
+            message="图片文件已损坏或格式不受支持，请选择 JPG、PNG 或 WebP 图片重试。",
         ) from error
 
     now = datetime.now(UTC)
@@ -137,7 +176,7 @@ def attach_images(db: Session, *, user: User, post: Post, image_ids: list[UUID])
         raise AppError(
             status_code=400,
             code="IMAGE_TOTAL_TOO_LARGE",
-            message="Post images must total 30 MB or less",
+            message="Post images must total 60 MB or less",
         )
     for position, image_id in enumerate(image_ids):
         image = by_id[image_id]
@@ -176,7 +215,7 @@ def replace_post_images(
         if image.status is PostImageStatus.PENDING and image.owner_id != user.id:
             raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message="One or more images are unavailable")
     if sum(image.file_size for image in requested) > MAX_TOTAL_SIZE:
-        raise AppError(status_code=400, code="IMAGE_TOTAL_TOO_LARGE", message="Post images must total 30 MB or less")
+        raise AppError(status_code=400, code="IMAGE_TOTAL_TOO_LARGE", message="Post images must total 60 MB or less")
     detached = [image for image_id, image in current.items() if image_id not in by_id]
     for image in detached:
         image.post = None

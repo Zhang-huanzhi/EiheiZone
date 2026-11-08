@@ -3,11 +3,13 @@ from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
 
+import pytest
 from fastapi import UploadFile
 from PIL import Image
 from sqlalchemy.orm import Session
 
 import app.modules.posts.image_service as image_service
+from app.core.errors import AppError
 from app.modules.auth.models import UserRole
 from app.modules.auth.service import create_user
 from app.modules.posts.models import Post, PostImageStatus, PostVisibility
@@ -134,3 +136,46 @@ def test_owner_can_replace_post_images_and_reorder(
 
     assert [image.id for image in updated.images] == [second.id]
     assert not first_path.exists()
+
+
+def test_upload_auto_resizes_high_resolution_and_mpo_images(
+    test_session: Session,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(image_service, "get_settings", lambda: SimpleNamespace(media_root=tmp_path))
+    owner = create_owner(test_session)
+
+    # 5000x4000 high-resolution image (> old 4096 limit)
+    high_res = image_service.upload_image(
+        test_session,
+        user=owner,
+        upload=make_image_upload(image_format="JPEG", size=(5000, 4000)),
+    )
+    assert high_res.width == 2048
+    assert high_res.height == 1638
+
+    # MPO dual-camera format
+    mpo_buf = BytesIO()
+    im1 = Image.new("RGB", (600, 400), "#123456")
+    im2 = Image.new("RGB", (300, 200), "#654321")
+    im1.save(mpo_buf, format="MPO", save_all=True, append_images=[im2])
+    mpo_buf.seek(0)
+    mpo_img = image_service.upload_image(
+        test_session,
+        user=owner,
+        upload=UploadFile(filename="camera.jpg", file=mpo_buf),
+    )
+    assert mpo_img.width == 600
+    assert mpo_img.height == 400
+
+    # HEIC disguised as .jpg returns clear Chinese error
+    heic_bytes = b"\x00\x00\x00\x18ftypheic\x00\x00\x00\x00heicmif1"
+    with pytest.raises(AppError) as exc_info:
+        image_service.upload_image(
+            test_session,
+            user=owner,
+            upload=UploadFile(filename="id_card.jpg", file=BytesIO(heic_bytes)),
+        )
+    assert exc_info.value.code == "INVALID_IMAGE"
+    assert "HEIC" in exc_info.value.message

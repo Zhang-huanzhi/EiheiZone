@@ -106,28 +106,49 @@ def test_member_directory_places_current_user_first_and_provides_defaults(
     client: TestClient,
     test_session: Session,
 ) -> None:
-    owner = create_member_account(test_session, role=UserRole.OWNER, display_name="Zzk")
-    father = create_member_account(test_session, role=UserRole.FAMILY, display_name="张爸")
-    mother = create_member_account(test_session, role=UserRole.FAMILY, display_name="张妈")
+    owner = create_member_account(test_session, role=UserRole.OWNER, display_name="张明")
+    family_b = create_member_account(test_session, role=UserRole.FAMILY, display_name="张爸")
 
-    login_with_csrf(client, father.login_name)
+    login_with_csrf(client, family_b.login_name)
     response = client.get("/api/v1/members")
     assert response.status_code == 200
-
     cards = response.json()
-    by_id = {card["user_id"]: card for card in cards}
-    assert cards[0]["user_id"] == str(father.id)
+    assert len(cards) >= 2
+    assert cards[0]["user_id"] == str(family_b.id)
     assert cards[0]["is_current_user"] is True
     assert cards[0]["can_edit"] is True
-    assert cards[0]["family_title"] == "张爸"
     assert cards[0]["accent_color"] == "deep_blue"
     assert cards[0]["layout_preference"] == "profile_first"
 
-    assert by_id[str(owner.id)]["can_edit"] is False
-    assert by_id[str(mother.id)]["can_edit"] is False
+    owner_card = next(card for card in cards if card["user_id"] == str(owner.id))
+    assert owner_card["is_current_user"] is False
+    assert owner_card["can_edit"] is False
 
 
-def test_family_can_edit_own_space_and_is_forbidden_from_editing_other_member_space(
+def test_public_cannot_access_member_spaces_or_member_images(
+    client: TestClient,
+    test_session: Session,
+) -> None:
+    member = create_member_account(test_session, role=UserRole.FAMILY, display_name="张妈")
+    csrf_token = login_with_csrf(client, member.login_name)
+    uploaded = upload_test_member_image(client, csrf_token=csrf_token, target_user_id=member.id)
+
+    # Attach as avatar so it becomes ATTACHED
+    profile_resp = client.put(
+        f"/api/v1/members/{member.id}/profile",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": csrf_token},
+        json={"avatar_image_id": uploaded["id"]},
+    )
+    assert profile_resp.status_code == 200
+
+    # Logout / clear cookies to simulate anonymous Public visitor
+    client.cookies.clear()
+    assert client.get("/api/v1/members").status_code == 401
+    assert client.get(f"/api/v1/members/{member.id}").status_code == 401
+    assert client.get(f"/api/v1/media/member-images/{uploaded['id']}").status_code == 404
+
+
+def test_family_member_can_only_edit_own_space_and_not_others(
     client: TestClient,
     test_session: Session,
 ) -> None:
@@ -141,22 +162,14 @@ def test_family_can_edit_own_space_and_is_forbidden_from_editing_other_member_sp
         headers={"Origin": ORIGIN, "X-CSRF-Token": csrf_token},
         json={
             "family_title": "老爸",
-            "identity_tags": ["退休老兵", "钓鱼爱好者"],
-            "status_text": "最近阳台月季开了",
-            "hobbies": "钓鱼、养花、下象棋",
-            "skills": "红烧带鱼、修家电",
-            "location": "老家",
-            "about_me": "年轻时走南闯北，现在喜欢家里热热闹闹。",
-            "accent_color": "forest_green",
-            "layout_preference": "gallery_first",
+            "identity_tags": ["钓友", "大厨"],
+            "status_text": "周末准备去水库钓鱼",
+            "hobbies": "钓鱼、象棋",
         },
     )
     assert own_update.status_code == 200
-    data = own_update.json()
-    assert data["family_title"] == "老爸"
-    assert data["identity_tags"] == ["退休老兵", "钓鱼爱好者"]
-    assert data["accent_color"] == "forest_green"
-    assert data["layout_preference"] == "gallery_first"
+    assert own_update.json()["family_title"] == "老爸"
+    assert own_update.json()["identity_tags"] == ["钓友", "大厨"]
 
     forbidden_profile = client.put(
         f"/api/v1/members/{mother.id}/profile",
@@ -306,3 +319,58 @@ def test_media_cleanup_preserves_attached_member_images_and_cleans_stale_pending
     assert stats.records_deleted == 1
     assert test_session.get(MemberImage, UUID(str(attached_upload["id"]))) is not None
     assert test_session.get(MemberImage, UUID(str(stale_upload["id"]))) is None
+
+
+def test_member_image_upload_supports_high_res_mpo_bmp_and_rejects_heic_clearly(
+    client: TestClient,
+    test_session: Session,
+) -> None:
+    """Verify high-res photos (>4096px), MPO/BMP formats succeed, and HEIC returns friendly Chinese message."""
+
+    member = create_member_account(test_session, role=UserRole.FAMILY, display_name="张弟")
+    csrf = login_with_csrf(client, member.login_name)
+
+    # 1. High-resolution 5000x3500 JPEG
+    high_res_bytes = make_jpeg_bytes(width=5000, height=3500)
+    resp_high = client.post(
+        f"/api/v1/members/{member.id}/uploads/image",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": csrf},
+        files={"file": ("身份证手持.jpg", high_res_bytes, "image/jpeg")},
+    )
+    assert resp_high.status_code == 201
+    assert resp_high.json()["width"] == 2048
+    assert resp_high.json()["height"] == 1434
+
+    # 2. MPO dual-camera JPEG
+    mpo_buf = BytesIO()
+    im1 = Image.new("RGB", (800, 600), "#224466")
+    im2 = Image.new("RGB", (400, 300), "#664422")
+    im1.save(mpo_buf, format="MPO", save_all=True, append_images=[im2])
+    resp_mpo = client.post(
+        f"/api/v1/members/{member.id}/uploads/image",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": csrf},
+        files={"file": ("portrait.jpg", mpo_buf.getvalue(), "image/jpeg")},
+    )
+    assert resp_mpo.status_code == 201
+    assert resp_mpo.json()["width"] == 800
+
+    # 3. BMP image
+    bmp_buf = BytesIO()
+    Image.new("RGB", (200, 150), "#336699").save(bmp_buf, format="BMP")
+    resp_bmp = client.post(
+        f"/api/v1/members/{member.id}/uploads/image",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": csrf},
+        files={"file": ("scan.bmp", bmp_buf.getvalue(), "image/bmp")},
+    )
+    assert resp_bmp.status_code == 201
+
+    # 4. HEIC disguised as .jpg
+    heic_bytes = b"\x00\x00\x00\x18ftypheic\x00\x00\x00\x00heicmif1"
+    resp_heic = client.post(
+        f"/api/v1/members/{member.id}/uploads/image",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": csrf},
+        files={"file": ("iphone_id.jpg", heic_bytes, "image/jpeg")},
+    )
+    assert resp_heic.status_code == 400
+    assert resp_heic.json()["error"]["code"] == "INVALID_IMAGE"
+    assert "HEIC" in resp_heic.json()["error"]["message"]

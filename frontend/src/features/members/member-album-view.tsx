@@ -26,6 +26,14 @@ import type {
   MemberPhotoRecord,
 } from "@/features/members/member-types";
 import { ApiRequestError } from "@/lib/api/client";
+import {
+  IMAGE_ACCEPT_ATTR,
+  IMAGE_UPLOAD_HINT,
+  formatImageUploadError,
+  prepareImageForUpload,
+  uploadImagesConcurrently,
+  validateImageFile,
+} from "@/lib/image-upload";
 import { cn } from "@/lib/utils";
 
 type MemberAlbumViewProps = {
@@ -41,9 +49,7 @@ type DraftPhotoItem = {
   story: string;
 };
 
-const MAX_BATCH_PHOTOS = 9;
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_BATCH_PHOTOS = 299;
 
 export function MemberAlbumView({
   initialAlbum,
@@ -66,6 +72,10 @@ export function MemberAlbumView({
   const [draftItems, setDraftItems] = useState<DraftPhotoItem[]>([]);
   const [batchError, setBatchError] = useState<string | null>(null);
   const [isUploadingBatch, setIsUploadingBatch] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
 
   // Single photo edit state
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
@@ -91,12 +101,9 @@ export function MemberAlbumView({
     }
 
     for (const file of incoming) {
-      if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
-        setBatchError("仅支持 JPG、PNG 或 WebP 格式的照片。");
-        return;
-      }
-      if (file.size > MAX_IMAGE_SIZE) {
-        setBatchError("单张照片大小不能超过 5 MB。");
+      const validationError = validateImageFile(file);
+      if (validationError) {
+        setBatchError(validationError);
         return;
       }
     }
@@ -123,22 +130,34 @@ export function MemberAlbumView({
 
     setBatchError(null);
     setIsUploadingBatch(true);
+    setBatchProgress({ current: 0, total: draftItems.length });
+    let failedFileName: string | undefined;
+
     try {
-      const uploadedItems = [];
-      for (const item of draftItems) {
-        const uploaded = await uploadMemberImage(
-          album.user_id,
-          item.file,
-          item.file.name,
-        );
-        uploadedItems.push({
-          image_id: uploaded.id,
-          taken_at_label:
-            item.takenAtLabel.trim() || sharedTakenAt.trim() || null,
-          location: item.location.trim() || sharedLocation.trim() || null,
-          story: item.story.trim() || null,
-        });
-      }
+      const uploadedItems = await uploadImagesConcurrently(
+        draftItems.map((item) => item.file),
+        4,
+        async (file, index) => {
+          failedFileName = file.name;
+          const { blob, filename } = await prepareImageForUpload(file);
+          const uploaded = await uploadMemberImage(
+            album.user_id,
+            blob,
+            filename,
+          );
+          const item = draftItems[index];
+          return {
+            image_id: uploaded.id,
+            taken_at_label:
+              item.takenAtLabel.trim() || sharedTakenAt.trim() || null,
+            location: item.location.trim() || sharedLocation.trim() || null,
+            story: item.story.trim() || null,
+          };
+        },
+        (completed, total) => {
+          setBatchProgress({ current: completed, total });
+        },
+      );
 
       const updatedAlbum = await addPhotosToMemberAlbum(
         album.user_id,
@@ -151,13 +170,10 @@ export function MemberAlbumView({
       setSharedLocation("");
       setIsAddingPhotos(false);
     } catch (error) {
-      setBatchError(
-        error instanceof ApiRequestError
-          ? error.message
-          : "上传照片失败，请稍后重试。",
-      );
+      setBatchError(formatImageUploadError(error, failedFileName));
     } finally {
       setIsUploadingBatch(false);
+      setBatchProgress(null);
     }
   }
 
@@ -372,12 +388,12 @@ export function MemberAlbumView({
           <div className="space-y-1">
             <h3 className="text-base font-semibold">添加照片与背后故事</h3>
             <p className="text-xs text-muted-foreground">
-              一次最多勾选 9 张照片；可以统一填一个大概年代（如“1988年秋”），也可以为每张照片写一句说明。
+              {IMAGE_UPLOAD_HINT}
             </p>
           </div>
 
           {batchError ? (
-            <p className="text-sm text-destructive" role="alert">
+            <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
               {batchError}
             </p>
           ) : null}
@@ -388,7 +404,7 @@ export function MemberAlbumView({
                 1. 选择手机或电脑中的照片
               </label>
               <input
-                accept="image/jpeg,image/png,image/webp"
+                accept={IMAGE_ACCEPT_ATTR}
                 className="w-full text-xs file:mr-2 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-1.5 file:text-xs file:font-medium"
                 id="batch-photo-files"
                 multiple
@@ -481,6 +497,7 @@ export function MemberAlbumView({
 
           <div className="flex justify-end gap-2">
             <Button
+              disabled={isUploadingBatch}
               onClick={() => setIsAddingPhotos(false)}
               size="sm"
               type="button"
@@ -488,8 +505,12 @@ export function MemberAlbumView({
             >
               取消
             </Button>
-            <Button disabled={isUploadingBatch} size="sm" type="submit">
-              {isUploadingBatch ? "正在上传保存…" : "保存发布照片"}
+            <Button disabled={isUploadingBatch || draftItems.length === 0} size="sm" type="submit">
+              {batchProgress
+                ? `正在上传 (${batchProgress.current}/${batchProgress.total})…`
+                : isUploadingBatch
+                  ? "正在保存…"
+                  : `保存发布照片${draftItems.length > 0 ? ` (${draftItems.length}张)` : ""}`}
             </Button>
           </div>
         </form>
