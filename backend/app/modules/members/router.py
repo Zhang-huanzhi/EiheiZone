@@ -310,7 +310,7 @@ def get_member_image_endpoint(
         path,
         media_type="image/webp",
         headers={
-            "Cache-Control": "private, max-age=86400",
+            "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",
         },
     )

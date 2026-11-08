@@ -175,7 +175,7 @@ def test_upload_generates_companion_thumbnail(
 
     image_bytes = make_test_image_bytes(1200, 800)
     upload_res = client.post(
-        f"/api/v1/members/{family.id}/images",
+        f"/api/v1/members/{family.id}/uploads/image",
         headers={"Origin": ORIGIN, "X-CSRF-Token": csrf_token},
         files={"file": ("photo.jpg", image_bytes, "image/jpeg")},
     )
@@ -208,7 +208,7 @@ def test_get_member_image_serves_thumb_and_full_variants(
 
     image_bytes = make_test_image_bytes(1600, 1000)
     upload_res = client.post(
-        f"/api/v1/members/{family.id}/images",
+        f"/api/v1/members/{family.id}/uploads/image",
         headers={"Origin": ORIGIN, "X-CSRF-Token": csrf_token},
         files={"file": ("photo.jpg", image_bytes, "image/jpeg")},
     )
@@ -217,14 +217,14 @@ def test_get_member_image_serves_thumb_and_full_variants(
     # Request default (full)
     full_res = client.get(f"/api/v1/media/member-images/{image_id}")
     assert full_res.status_code == 200
-    assert full_res.headers["Cache-Control"] == "private, max-age=86400"
+    assert full_res.headers["Cache-Control"].lower() == "private, no-store"
     with Image.open(BytesIO(full_res.content)) as full_img:
         assert full_img.size == (1600, 1000)
 
     # Request thumb variant
     thumb_res = client.get(f"/api/v1/media/member-images/{image_id}?variant=thumb")
     assert thumb_res.status_code == 200
-    assert thumb_res.headers["Cache-Control"] == "private, max-age=86400"
+    assert thumb_res.headers["Cache-Control"].lower() == "private, no-store"
     with Image.open(BytesIO(thumb_res.content)) as thumb_img:
         w, h = thumb_img.size
         assert max(w, h) <= 480
@@ -240,7 +240,7 @@ def test_on_demand_thumbnail_generation_for_legacy_photo(
 
     image_bytes = make_test_image_bytes(800, 600)
     upload_res = client.post(
-        f"/api/v1/members/{family.id}/images",
+        f"/api/v1/members/{family.id}/uploads/image",
         headers={"Origin": ORIGIN, "X-CSRF-Token": csrf_token},
         files={"file": ("photo.jpg", image_bytes, "image/jpeg")},
     )
