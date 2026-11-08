@@ -126,6 +126,10 @@ describe("Dashboard pages", () => {
     render(await OwnerPage());
 
     expect(mockedGetServerDashboard).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("link", { name: /成员空间管理/ })).toHaveAttribute(
+      "href",
+      "/owner/members",
+    );
     expect(screen.getByRole("link", { name: /近况管理/ })).toHaveAttribute(
       "href",
       "/owner/posts",

@@ -3,14 +3,15 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.modules.auth.router import router as auth_router
 from app.modules.dashboard.router import router as dashboard_router
 from app.modules.expenditures.router import router as expenditures_router
-from app.modules.auth.router import router as auth_router
+from app.modules.members.router import member_media_router, router as members_router
+from app.modules.notifications.router import router as notifications_router, wechat_router
+from app.modules.posts.image_router import media_router, router as uploads_router
 from app.modules.posts.router import public_router as public_posts_router
 from app.modules.posts.router import router as posts_router
-from app.modules.posts.image_router import media_router, router as uploads_router
 from app.modules.qas.router import router as qas_router
-from app.modules.notifications.router import router as notifications_router, wechat_router
 
 
 router = APIRouter()
@@ -19,6 +20,8 @@ router.include_router(public_posts_router)
 router.include_router(posts_router)
 router.include_router(uploads_router)
 router.include_router(media_router)
+router.include_router(members_router)
+router.include_router(member_media_router)
 router.include_router(qas_router)
 router.include_router(expenditures_router)
 router.include_router(dashboard_router)

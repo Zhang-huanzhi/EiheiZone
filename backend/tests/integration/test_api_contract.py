@@ -20,6 +20,20 @@ EXPECTED_OPERATIONS = {
     ("delete", "/api/v1/posts/{post_id}"),
     ("post", "/api/v1/uploads/image"),
     ("get", "/api/v1/media/images/{image_id}"),
+    ("get", "/api/v1/members"),
+    ("get", "/api/v1/members/{user_id}"),
+    ("put", "/api/v1/members/{user_id}/profile"),
+    ("post", "/api/v1/members/{user_id}/uploads/image"),
+    ("post", "/api/v1/members/{user_id}/albums"),
+    ("get", "/api/v1/members/{user_id}/albums/{album_id}"),
+    ("patch", "/api/v1/members/{user_id}/albums/{album_id}"),
+    ("delete", "/api/v1/members/{user_id}/albums/{album_id}"),
+    ("post", "/api/v1/members/{user_id}/photos"),
+    ("delete", "/api/v1/members/{user_id}/photos/{photo_id}"),
+    ("post", "/api/v1/members/{user_id}/albums/{album_id}/photos"),
+    ("patch", "/api/v1/members/{user_id}/albums/{album_id}/photos/{photo_id}"),
+    ("delete", "/api/v1/members/{user_id}/albums/{album_id}/photos/{photo_id}"),
+    ("get", "/api/v1/media/member-images/{image_id}"),
     ("get", "/api/v1/notifications/wechat"),
     ("post", "/api/v1/notifications/wechat/code"),
     ("delete", "/api/v1/notifications/wechat"),
@@ -56,5 +70,6 @@ def test_openapi_has_no_out_of_scope_public_or_user_management_api() -> None:
     assert "/api/v1/public/qas" not in paths
     assert "/api/v1/public/expenditures" not in paths
     assert "/api/v1/public/dashboard" not in paths
+    assert "/api/v1/public/members" not in paths
     assert "/api/v1/users" not in paths
     assert "/api/v1/auth/register" not in paths

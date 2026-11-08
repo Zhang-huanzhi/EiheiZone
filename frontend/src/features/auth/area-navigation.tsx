@@ -7,6 +7,7 @@ import {
   MessageCircleQuestion,
   Newspaper,
   ReceiptText,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,6 +20,7 @@ type AreaNavigationProps = {
 
 const familyItems = [
   { href: "/family", icon: House, label: "家庭首页" },
+  { href: "/family/members", icon: Users, label: "家庭成员" },
   { href: "/family/posts", icon: Newspaper, label: "近况" },
   { href: "/family/qas", icon: MessageCircleQuestion, label: "问答" },
   { href: "/family/expenditures", icon: ReceiptText, label: "重大支出" },
@@ -26,6 +28,7 @@ const familyItems = [
 
 const ownerItems = [
   { href: "/owner", icon: LayoutDashboard, label: "管理工作台" },
+  { href: "/owner/members", icon: Users, label: "成员空间管理" },
   { href: "/owner/posts", icon: Newspaper, label: "近况管理" },
   { href: "/owner/qas", icon: CircleHelp, label: "问答管理" },
   { href: "/owner/expenditures", icon: ReceiptText, label: "支出管理" },

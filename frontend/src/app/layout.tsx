@@ -43,8 +43,9 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="zh-CN"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="zh-CN"
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
         <NavigationProgress />

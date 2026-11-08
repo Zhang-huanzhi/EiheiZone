@@ -10,6 +10,7 @@ import app.modules.posts.models  # noqa: F401  # Register Post tables with Base.
 import app.modules.qas.models  # noqa: F401  # Register QA tables with Base.metadata.
 import app.modules.expenditures.models  # noqa: F401  # Register Expenditure tables.
 import app.modules.notifications.models  # noqa: F401  # Register Notification tables.
+import app.modules.members.models  # noqa: F401  # Register Member Space tables.
 
 
 config = context.config
