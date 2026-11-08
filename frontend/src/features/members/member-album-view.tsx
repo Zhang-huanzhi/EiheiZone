@@ -31,6 +31,7 @@ import {
   IMAGE_UPLOAD_HINT,
   formatImageUploadError,
   prepareImageForUpload,
+  uploadImagesConcurrently,
   validateImageFile,
 } from "@/lib/image-upload";
 import { cn } from "@/lib/utils";
@@ -48,7 +49,7 @@ type DraftPhotoItem = {
   story: string;
 };
 
-const MAX_BATCH_PHOTOS = 9;
+const MAX_BATCH_PHOTOS = 299;
 
 export function MemberAlbumView({
   initialAlbum,
@@ -71,6 +72,10 @@ export function MemberAlbumView({
   const [draftItems, setDraftItems] = useState<DraftPhotoItem[]>([]);
   const [batchError, setBatchError] = useState<string | null>(null);
   const [isUploadingBatch, setIsUploadingBatch] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
 
   // Single photo edit state
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
@@ -125,25 +130,34 @@ export function MemberAlbumView({
 
     setBatchError(null);
     setIsUploadingBatch(true);
-    let currentFileName: string | undefined;
+    setBatchProgress({ current: 0, total: draftItems.length });
+    let failedFileName: string | undefined;
+
     try {
-      const uploadedItems = [];
-      for (const item of draftItems) {
-        currentFileName = item.file.name;
-        const { blob, filename } = await prepareImageForUpload(item.file);
-        const uploaded = await uploadMemberImage(
-          album.user_id,
-          blob,
-          filename,
-        );
-        uploadedItems.push({
-          image_id: uploaded.id,
-          taken_at_label:
-            item.takenAtLabel.trim() || sharedTakenAt.trim() || null,
-          location: item.location.trim() || sharedLocation.trim() || null,
-          story: item.story.trim() || null,
-        });
-      }
+      const uploadedItems = await uploadImagesConcurrently(
+        draftItems.map((item) => item.file),
+        4,
+        async (file, index) => {
+          failedFileName = file.name;
+          const { blob, filename } = await prepareImageForUpload(file);
+          const uploaded = await uploadMemberImage(
+            album.user_id,
+            blob,
+            filename,
+          );
+          const item = draftItems[index];
+          return {
+            image_id: uploaded.id,
+            taken_at_label:
+              item.takenAtLabel.trim() || sharedTakenAt.trim() || null,
+            location: item.location.trim() || sharedLocation.trim() || null,
+            story: item.story.trim() || null,
+          };
+        },
+        (completed, total) => {
+          setBatchProgress({ current: completed, total });
+        },
+      );
 
       const updatedAlbum = await addPhotosToMemberAlbum(
         album.user_id,
@@ -156,9 +170,10 @@ export function MemberAlbumView({
       setSharedLocation("");
       setIsAddingPhotos(false);
     } catch (error) {
-      setBatchError(formatImageUploadError(error, currentFileName));
+      setBatchError(formatImageUploadError(error, failedFileName));
     } finally {
       setIsUploadingBatch(false);
+      setBatchProgress(null);
     }
   }
 
@@ -482,6 +497,7 @@ export function MemberAlbumView({
 
           <div className="flex justify-end gap-2">
             <Button
+              disabled={isUploadingBatch}
               onClick={() => setIsAddingPhotos(false)}
               size="sm"
               type="button"
@@ -489,8 +505,12 @@ export function MemberAlbumView({
             >
               取消
             </Button>
-            <Button disabled={isUploadingBatch} size="sm" type="submit">
-              {isUploadingBatch ? "正在上传保存…" : "保存发布照片"}
+            <Button disabled={isUploadingBatch || draftItems.length === 0} size="sm" type="submit">
+              {batchProgress
+                ? `正在上传 (${batchProgress.current}/${batchProgress.total})…`
+                : isUploadingBatch
+                  ? "正在保存…"
+                  : `保存发布照片${draftItems.length > 0 ? ` (${draftItems.length}张)` : ""}`}
             </Button>
           </div>
         </form>

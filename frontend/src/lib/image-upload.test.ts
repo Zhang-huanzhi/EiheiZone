@@ -4,17 +4,22 @@ import { ApiRequestError } from "@/lib/api/client";
 import {
   formatImageUploadError,
   prepareImageForUpload,
+  uploadImagesConcurrently,
   validateImageFile,
 } from "@/lib/image-upload";
 
 describe("image-upload utilities", () => {
   it("accepts standard and extended image formats up to 20 MB", () => {
     const jpg = new File(["data"], "身份证手持.jpg", { type: "image/jpeg" });
+    const jpge = new File(["data"], "photo.jpge", { type: "" });
+    const jfif = new File(["data"], "picture.jfif", { type: "" });
     const avif = new File(["data"], "photo.avif", { type: "image/avif" });
     const bmp = new File(["data"], "scan.bmp", { type: "image/bmp" });
     const emptyMimeJpg = new File(["data"], "camera.JPG", { type: "" });
 
     expect(validateImageFile(jpg)).toBeNull();
+    expect(validateImageFile(jpge)).toBeNull();
+    expect(validateImageFile(jfif)).toBeNull();
     expect(validateImageFile(avif)).toBeNull();
     expect(validateImageFile(bmp)).toBeNull();
     expect(validateImageFile(emptyMimeJpg)).toBeNull();
@@ -59,5 +64,25 @@ describe("image-upload utilities", () => {
     expect(formatted).toBe(
       "「身份证手持.jpg」上传失败：检测到苹果 HEIC 原图格式，请先在系统相册中导出为 JPG/PNG 后再上传。",
     );
+  });
+
+  it("handles concurrent batch uploads with progress tracking", async () => {
+    const files = Array.from(
+      { length: 10 },
+      (_, idx) => new File(["data"], `photo-${idx}.jpg`, { type: "image/jpeg" }),
+    );
+    const progressList: number[] = [];
+
+    const results = await uploadImagesConcurrently(
+      files,
+      3,
+      async (file) => file.name,
+      (completed) => progressList.push(completed),
+    );
+
+    expect(results).toHaveLength(10);
+    expect(results[0]).toBe("photo-0.jpg");
+    expect(results[9]).toBe("photo-9.jpg");
+    expect(progressList.at(-1)).toBe(10);
   });
 });

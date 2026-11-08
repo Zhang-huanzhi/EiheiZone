@@ -28,6 +28,7 @@ import {
   IMAGE_UPLOAD_HINT,
   formatImageUploadError,
   prepareImageForUpload,
+  uploadImagesConcurrently,
   validateImageFile,
 } from "@/lib/image-upload";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,7 @@ type MemberSpaceViewProps = {
   basePath: "/family/members" | "/owner/members";
 };
 
-const MAX_BATCH_PHOTOS = 9;
+const MAX_BATCH_PHOTOS = 299;
 
 export function MemberSpaceView({
   initialSpace,
@@ -53,6 +54,10 @@ export function MemberSpaceView({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isSubmittingPhotos, setIsSubmittingPhotos] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
 
   // Lightbox state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -98,21 +103,27 @@ export function MemberSpaceView({
 
     setUploadError(null);
     setIsSubmittingPhotos(true);
-    let currentFileName: string | undefined;
+    setUploadProgress({ current: 0, total: selectedFiles.length });
+    let failedFileName: string | undefined;
+
     try {
-      const uploadedPayload = [];
-      for (const file of selectedFiles) {
-        currentFileName = file.name;
-        const { blob, filename } = await prepareImageForUpload(file);
-        const uploadedImg = await uploadMemberImage(
-          space.user_id,
-          blob,
-          filename,
-        );
-        uploadedPayload.push({
-          image_id: uploadedImg.id,
-        });
-      }
+      const uploadedPayload = await uploadImagesConcurrently(
+        selectedFiles,
+        4,
+        async (file) => {
+          failedFileName = file.name;
+          const { blob, filename } = await prepareImageForUpload(file);
+          const uploadedImg = await uploadMemberImage(
+            space.user_id,
+            blob,
+            filename,
+          );
+          return { image_id: uploadedImg.id };
+        },
+        (completed, total) => {
+          setUploadProgress({ current: completed, total });
+        },
+      );
 
       const createdPhotos = await addPhotosToMemberGallery(space.user_id, {
         photos: uploadedPayload,
@@ -127,9 +138,10 @@ export function MemberSpaceView({
       setSelectedFiles([]);
       setIsUploadingPhotos(false);
     } catch (error) {
-      setUploadError(formatImageUploadError(error, currentFileName));
+      setUploadError(formatImageUploadError(error, failedFileName));
     } finally {
       setIsSubmittingPhotos(false);
+      setUploadProgress(null);
     }
   }
 
@@ -326,9 +338,20 @@ export function MemberSpaceView({
             ) : null}
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium">
-                选择照片（单次最多 9 张）
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium">
+                  选择照片（单次最多 {MAX_BATCH_PHOTOS} 张）
+                </label>
+                {selectedFiles.length > 0 ? (
+                  <button
+                    className="text-xs text-muted-foreground hover:text-destructive"
+                    onClick={() => setSelectedFiles([])}
+                    type="button"
+                  >
+                    清空所选（已选 {selectedFiles.length} 张）
+                  </button>
+                ) : null}
+              </div>
               <input
                 accept={IMAGE_ACCEPT_ATTR}
                 className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-muted file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-muted/80"
@@ -342,7 +365,7 @@ export function MemberSpaceView({
 
               {selectedFiles.length > 0 ? (
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {selectedFiles.map((file, idx) => (
+                  {selectedFiles.slice(0, 16).map((file, idx) => (
                     <div
                       className="group relative flex size-16 items-center justify-center overflow-hidden rounded-md border border-border bg-muted text-xs"
                       key={idx}
@@ -359,12 +382,18 @@ export function MemberSpaceView({
                       </button>
                     </div>
                   ))}
+                  {selectedFiles.length > 16 ? (
+                    <div className="flex size-16 items-center justify-center rounded-md border border-dashed border-border bg-muted/50 p-1 text-center text-[11px] font-medium text-muted-foreground">
+                      +{selectedFiles.length - 16} 张
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
 
             <div className="flex justify-end gap-2 border-t border-border pt-3">
               <Button
+                disabled={isSubmittingPhotos}
                 onClick={() => setIsUploadingPhotos(false)}
                 size="sm"
                 type="button"
@@ -377,7 +406,11 @@ export function MemberSpaceView({
                 size="sm"
                 type="submit"
               >
-                {isSubmittingPhotos ? "正在上传…" : "确认上传"}
+                {uploadProgress
+                  ? `正在上传 (${uploadProgress.current}/${uploadProgress.total})…`
+                  : isSubmittingPhotos
+                    ? "正在保存…"
+                    : `确认上传${selectedFiles.length > 0 ? ` (${selectedFiles.length}张)` : ""}`}
               </Button>
             </div>
           </form>

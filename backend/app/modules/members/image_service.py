@@ -21,11 +21,11 @@ from app.modules.members.models import (
     MemberProfile,
 )
 
-MAX_BATCH_PHOTOS = 9
+MAX_BATCH_PHOTOS = 300
 MAX_FILE_SIZE = 20 * 1024 * 1024
 MAX_LONG_EDGE = 16384
 MAX_PIXELS = 75 * 1024 * 1024
-MAX_TOTAL_SIZE = 60 * 1024 * 1024
+MAX_TOTAL_SIZE = 500 * 1024 * 1024
 ALLOWED_FORMATS = {"JPEG", "MPO", "PNG", "WEBP", "AVIF", "GIF", "BMP", "DIB", "TIFF"}
 _HEIC_BRANDS = {b"heic", b"heix", b"hevc", b"hevx", b"mif1", b"msf1"}
 
@@ -195,7 +195,7 @@ def attach_batch_album_images(
         raise AppError(
             status_code=400,
             code="INVALID_IMAGE_LIST",
-            message="An album batch must contain between 1 and 9 unique images",
+            message=f"单次批量上传照片数量需在 1 至 {MAX_BATCH_PHOTOS} 张之间，且不能重复",
         )
     images = list(
         db.scalars(
@@ -210,13 +210,13 @@ def attach_batch_album_images(
         raise AppError(
             status_code=400,
             code="INVALID_IMAGE_LIST",
-            message="One or more member images are unavailable",
+            message="部分待关联照片不存在或已被处理",
         )
     if sum(image.file_size for image in images) > MAX_TOTAL_SIZE:
         raise AppError(
             status_code=400,
             code="IMAGE_TOTAL_TOO_LARGE",
-            message="Album batch images must total 60 MB or less",
+            message="单次批量保存的照片总大小超出上限",
         )
     by_id: dict[UUID, MemberImage] = {}
     for image in images:

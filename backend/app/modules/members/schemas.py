@@ -21,7 +21,7 @@ MAX_ALBUM_TITLE_LENGTH = 60
 MAX_ALBUM_DESCRIPTION_LENGTH = 300
 MAX_TAKEN_AT_LABEL_LENGTH = 60
 MAX_PHOTO_STORY_LENGTH = 500
-MAX_BATCH_PHOTOS = 9
+MAX_BATCH_PHOTOS = 300
 
 
 def _normalize_optional_single_line(value: str | None, *, max_length: int, label: str) -> str | None:

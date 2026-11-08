@@ -4,7 +4,7 @@ export const MAX_RAW_IMAGE_SIZE = 20 * 1024 * 1024;
 export const MAX_TARGET_DIMENSION = 2048;
 
 export const IMAGE_ACCEPT_ATTR =
-  "image/jpeg,image/png,image/webp,image/avif,image/gif,image/bmp,image/tiff,.jpg,.jpeg,.png,.webp,.avif,.gif,.bmp,.tif,.tiff";
+  "image/jpeg,image/png,image/webp,image/avif,image/gif,image/bmp,image/tiff,.jpg,.jpeg,.jpge,.jfif,.jpe,.png,.webp,.avif,.gif,.bmp,.dib,.tif,.tiff";
 
 export const IMAGE_UPLOAD_HINT =
   "支持 JPG、PNG、WebP、AVIF、GIF、BMP 等常见格式，高清大图将自动压缩优化";
@@ -25,6 +25,9 @@ const ACCEPTED_MIME_TYPES = new Set([
 const ACCEPTED_EXTENSIONS = new Set([
   ".jpg",
   ".jpeg",
+  ".jpge",
+  ".jfif",
+  ".jpe",
   ".png",
   ".webp",
   ".avif",
@@ -142,4 +145,38 @@ export function formatImageUploadError(
     return `${prefix}${msg}`;
   }
   return `${prefix}上传图片失败，请稍后重试。`;
+}
+
+/**
+ * Concurrently process and upload multiple images with controlled concurrency,
+ * updating completed progress counts along the way (ideal for large batches up to 299 images).
+ */
+export async function uploadImagesConcurrently<T>(
+  files: File[],
+  concurrency: number,
+  uploadItemFn: (file: File, index: number) => Promise<T>,
+  onProgress?: (completed: number, total: number) => void,
+): Promise<T[]> {
+  if (files.length === 0) {
+    return [];
+  }
+  const results: T[] = new Array(files.length);
+  let nextIndex = 0;
+  let completedCount = 0;
+
+  async function worker() {
+    while (nextIndex < files.length) {
+      const currentIndex = nextIndex++;
+      const file = files[currentIndex];
+      const result = await uploadItemFn(file, currentIndex);
+      results[currentIndex] = result;
+      completedCount++;
+      onProgress?.(completedCount, files.length);
+    }
+  }
+
+  const workerCount = Math.min(Math.max(1, concurrency), files.length);
+  const workers = Array.from({ length: workerCount }, () => worker());
+  await Promise.all(workers);
+  return results;
 }
