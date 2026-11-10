@@ -179,3 +179,27 @@ def test_upload_auto_resizes_high_resolution_and_mpo_images(
         )
     assert exc_info.value.code == "INVALID_IMAGE"
     assert "HEIC" in exc_info.value.message
+
+
+def test_attach_and_replace_images_rejects_exceeding_max_limit_with_chinese_error() -> None:
+    dummy_post = SimpleNamespace(images=[])
+    dummy_user = SimpleNamespace(id=uuid4())
+
+    ten_ids = [uuid4() for _ in range(10)]
+    with pytest.raises(AppError) as exc_info:
+        image_service.attach_images(None, user=dummy_user, post=dummy_post, image_ids=ten_ids)  # type: ignore[arg-type]
+    assert exc_info.value.code == "INVALID_IMAGE_LIST"
+    assert "9 张图片" in exc_info.value.message
+
+    with pytest.raises(AppError) as exc_info_replace:
+        image_service.replace_post_images(None, user=dummy_user, post=dummy_post, image_ids=ten_ids)  # type: ignore[arg-type]
+    assert exc_info_replace.value.code == "INVALID_IMAGE_LIST"
+    assert "9 张图片" in exc_info_replace.value.message
+
+    # Duplicate IDs are also rejected
+    duplicate_ids = [uuid4(), uuid4()]
+    duplicate_ids.append(duplicate_ids[0])
+    with pytest.raises(AppError) as exc_info_dup:
+        image_service.attach_images(None, user=dummy_user, post=dummy_post, image_ids=duplicate_ids)  # type: ignore[arg-type]
+    assert exc_info_dup.value.code == "INVALID_IMAGE_LIST"
+    assert "且不能重复" in exc_info_dup.value.message
