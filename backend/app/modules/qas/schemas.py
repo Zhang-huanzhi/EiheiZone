@@ -21,9 +21,10 @@ def _validate_text(value: str, *, label: str, maximum: int) -> str:
 
 
 class QACreate(BaseModel):
-    """Accept the question text a Family or Owner user may submit."""
+    """Accept the question text and optional proxy flag a Family or Owner user may submit."""
 
     question: str
+    is_proxy: bool = False
 
     @field_validator("question")
     @classmethod
@@ -32,9 +33,10 @@ class QACreate(BaseModel):
 
 
 class QAAnswerUpsert(BaseModel):
-    """Accept the complete current answer an Owner may save."""
+    """Accept the answer text for backward compatibility."""
 
     answer: str
+    is_proxy: bool = False
 
     @field_validator("answer")
     @classmethod
@@ -42,17 +44,57 @@ class QAAnswerUpsert(BaseModel):
         return _validate_text(value, label="Answer", maximum=MAX_ANSWER_LENGTH)
 
 
+class QAAnswerCreate(BaseModel):
+    """Accept the answer content and proxy flag for a new answer."""
+
+    content: str
+    is_proxy: bool = False
+
+    @field_validator("content")
+    @classmethod
+    def validate_content(cls, value: str) -> str:
+        return _validate_text(value, label="Answer", maximum=MAX_ANSWER_LENGTH)
+
+
+class QAAnswerUpdate(BaseModel):
+    """Accept updated answer content and proxy flag."""
+
+    content: str
+    is_proxy: bool = False
+
+    @field_validator("content")
+    @classmethod
+    def validate_content(cls, value: str) -> str:
+        return _validate_text(value, label="Answer", maximum=MAX_ANSWER_LENGTH)
+
+
+class QAAnswerResponse(BaseModel):
+    """Return an individual answer and author display information."""
+
+    id: UUID
+    qa_id: UUID
+    author_id: UUID
+    author_display_name: str = Field(min_length=1, max_length=80)
+    content: str = Field(min_length=1, max_length=MAX_ANSWER_LENGTH)
+    is_proxy: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+
 class QAResponse(BaseModel):
-    """Return the QA and only the actor information pages need."""
+    """Return the QA thread and its answers."""
 
     id: UUID
     asked_by: UUID
     asked_by_display_name: str = Field(min_length=1, max_length=80)
     question: str = Field(min_length=1, max_length=MAX_QUESTION_LENGTH)
-    answer: str | None = Field(default=None, min_length=1, max_length=MAX_ANSWER_LENGTH)
-    answered_by: UUID | None
-    answered_by_display_name: str | None = Field(default=None, min_length=1, max_length=80)
+    is_proxy: bool = False
     status: QAStatus
-    answered_at: datetime | None
+    answers_count: int = 0
+    answers: list[QAAnswerResponse] = Field(default_factory=list)
+    answer: str | None = Field(default=None, max_length=MAX_ANSWER_LENGTH)
+    answered_by: UUID | None = None
+    answered_by_display_name: str | None = Field(default=None, max_length=80)
+    answered_at: datetime | None = None
     created_at: datetime
     updated_at: datetime

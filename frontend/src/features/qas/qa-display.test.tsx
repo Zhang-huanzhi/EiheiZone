@@ -9,10 +9,13 @@ const unansweredQA: QARecord = {
   asked_by: "family-id",
   asked_by_display_name: "Family User",
   question: "When is the next update?",
+  is_proxy: false,
   answer: null,
   answered_by: null,
   answered_by_display_name: null,
   status: "unanswered",
+  answers_count: 0,
+  answers: [],
   answered_at: null,
   created_at: "2026-07-27T00:00:00Z",
   updated_at: "2026-07-27T00:00:00Z",
@@ -23,28 +26,39 @@ describe("QA display", () => {
     render(<QADetail qa={unansweredQA} />);
 
     expect(screen.getByText("待回答")).toBeInTheDocument();
-    expect(screen.getByText("这个问题正在等待回答。")).toBeInTheDocument();
+    expect(screen.getByText("暂无回答。")).toBeInTheDocument();
     expect(screen.queryByText(/null/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "回答" })).not.toBeInTheDocument();
   });
 
-  it("shows one complete current answer with its Owner actor", () => {
+  it("shows answers with actors and proxy badges", () => {
     render(
       <QADetail
         qa={{
           ...unansweredQA,
-          answer: "The update is ready.",
-          answered_by: "owner-id",
-          answered_by_display_name: "Owner User",
+          is_proxy: true,
           status: "answered",
-          answered_at: "2026-07-27T01:00:00Z",
+          answers_count: 1,
+          answers: [
+            {
+              id: "ans-1",
+              qa_id: "qa-id",
+              author_id: "owner-id",
+              author_display_name: "Owner User",
+              content: "The update is ready.",
+              is_proxy: true,
+              created_at: "2026-07-27T01:00:00Z",
+              updated_at: "2026-07-27T01:00:00Z",
+            },
+          ],
         }}
       />,
     );
 
     expect(screen.getByText("已回答")).toBeInTheDocument();
+    expect(screen.getByText("代问")).toBeInTheDocument();
+    expect(screen.getByText("代回答")).toBeInTheDocument();
     expect(screen.getByText("The update is ready.")).toBeInTheDocument();
-    expect(screen.getByText(/Owner User 回答于/)).toBeInTheDocument();
+    expect(screen.getByText("Owner User")).toBeInTheDocument();
   });
 
   it("shows the answer time only for answered list items", () => {
@@ -63,6 +77,8 @@ describe("QA display", () => {
               answered_by: "owner-id",
               answered_by_display_name: "Owner User",
               status: "answered",
+              answers_count: 1,
+              answers: [],
               answered_at: "2026-07-27T01:00:00Z",
             },
           ],
@@ -82,8 +98,6 @@ describe("QA display", () => {
       "/family/qas/answered-qa-id",
     );
     expect(screen.getAllByText(/Family User/)).toHaveLength(2);
-    expect(screen.getByText(/回答于/)).toBeInTheDocument();
-    expect(screen.getAllByText(/回答于/)).toHaveLength(1);
-    expect(screen.getByText("待回答")).toHaveClass("shrink-0");
+    expect(screen.getByText(/最后回答于/)).toBeInTheDocument();
   });
 });

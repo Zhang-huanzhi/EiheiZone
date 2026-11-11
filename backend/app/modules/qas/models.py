@@ -1,10 +1,10 @@
-"""Database model for one Family question and one current Owner answer."""
+"""Database models for Family question threads and multi-perspective answers."""
 
 from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import CheckConstraint, DateTime, Enum as SqlEnum, ForeignKey, Index, Text, text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum as SqlEnum, ForeignKey, Index, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -17,7 +17,7 @@ def utc_now() -> datetime:
 
 
 class QAStatus(str, Enum):
-    """Describe whether a QA has a complete current answer."""
+    """Describe whether a QA thread has received any answer."""
 
     UNANSWERED = "unanswered"
     ANSWERED = "answered"
@@ -36,7 +36,7 @@ def enum_values(enum_class: type[Enum]) -> list[str]:
 
 
 class QA(Base):
-    """A Family question with at most one current Owner answer."""
+    """A Family question topic that accepts answers from any family member."""
 
     __tablename__ = "qas"
     # noinspection SpellCheckingInspection
@@ -45,28 +45,16 @@ class QA(Base):
             "char_length(question) BETWEEN 1 AND 2000 AND char_length(btrim(question)) >= 1",
             name="qa_question_length",
         ),
-        CheckConstraint(
-            "answer IS NULL OR (char_length(answer) BETWEEN 1 AND 10000 "
-            "AND char_length(btrim(answer)) >= 1)",
-            name="qa_answer_length",
-        ),
-        CheckConstraint(
-            "(status = 'unanswered' AND answer IS NULL AND answered_by IS NULL "
-            "AND answered_at IS NULL) OR "
-            "(status = 'answered' AND answer IS NOT NULL AND answered_by IS NOT NULL "
-            "AND answered_at IS NOT NULL)",
-            name="qa_answer_state_consistency",
-        ),
         Index("ix_qas_status_created_at", "status", text("created_at DESC")),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     asked_by: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
     question: Mapped[str] = mapped_column(Text)
-    answer: Mapped[str | None] = mapped_column(Text, nullable=True)
-    answered_by: Mapped[UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="RESTRICT"),
-        nullable=True,
+    is_proxy: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=text("false"),
     )
     status: Mapped[QAStatus] = mapped_column(
         SqlEnum(
@@ -80,7 +68,6 @@ class QA(Base):
         default=QAStatus.UNANSWERED,
         server_default=text("'unanswered'"),
     )
-    answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,
@@ -94,4 +81,47 @@ class QA(Base):
     )
 
     asker: Mapped[object] = relationship("User", foreign_keys=[asked_by])
-    answerer: Mapped[object | None] = relationship("User", foreign_keys=[answered_by])
+    answers: Mapped[list["QAAnswer"]] = relationship(
+        "QAAnswer",
+        back_populates="qa",
+        cascade="all, delete-orphan",
+        order_by="QAAnswer.created_at.asc()",
+    )
+
+
+class QAAnswer(Base):
+    """An individual answer or recollection contributed to a question topic."""
+
+    __tablename__ = "qa_answers"
+    # noinspection SpellCheckingInspection
+    __table_args__ = (
+        CheckConstraint(
+            "char_length(content) BETWEEN 1 AND 10000 AND char_length(btrim(content)) >= 1",
+            name="qa_answer_content_length",
+        ),
+        Index("ix_qa_answers_qa_created_at", "qa_id", text("created_at ASC"), text("id ASC")),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    qa_id: Mapped[UUID] = mapped_column(ForeignKey("qas.id", ondelete="CASCADE"))
+    author_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    content: Mapped[str] = mapped_column(Text)
+    is_proxy: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=text("false"),
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        server_default=text("CURRENT_TIMESTAMP"),
+    )
+
+    qa: Mapped[QA] = relationship("QA", back_populates="answers")
+    author: Mapped[object] = relationship("User", foreign_keys=[author_id])
