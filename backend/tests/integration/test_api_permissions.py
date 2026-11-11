@@ -93,6 +93,10 @@ def login_with_csrf(client: TestClient, login_name: str) -> str:
         ("get", "/api/v1/qas", None),
         ("get", f"/api/v1/qas/{uuid4()}", None),
         ("post", "/api/v1/qas", {"question": "Question"}),
+        ("delete", f"/api/v1/qas/{uuid4()}", None),
+        ("post", f"/api/v1/qas/{uuid4()}/answers", {"content": "Answer"}),
+        ("put", f"/api/v1/qas/{uuid4()}/answers/{uuid4()}", {"content": "Answer"}),
+        ("delete", f"/api/v1/qas/{uuid4()}/answers/{uuid4()}", None),
         ("put", f"/api/v1/qas/{uuid4()}/answer", {"answer": "Answer"}),
         ("get", "/api/v1/expenditures", None),
         ("get", f"/api/v1/expenditures/{uuid4()}", None),
@@ -132,7 +136,6 @@ def test_public_is_rejected_by_every_protected_operation(
     [
         ("patch", f"/api/v1/posts/{uuid4()}", {"title": "Updated"}),
         ("delete", f"/api/v1/posts/{uuid4()}", None),
-        ("put", f"/api/v1/qas/{uuid4()}/answer", {"answer": "Answer"}),
         (
             "post",
             "/api/v1/expenditures",

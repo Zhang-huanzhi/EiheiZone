@@ -1,5 +1,5 @@
 ---
-id: T007
+id: T008
 title: 家庭问答（QA）升级为多回答主题讨论与代问代答
 type: feat
 status: Accepted
@@ -8,7 +8,7 @@ updated: "2026-11-11"
 branch: feat/007-multi-answer-qa
 ---
 
-# T007 家庭问答（QA）升级为多回答主题讨论与代问代答
+# T008 家庭问答（QA）升级为多回答主题讨论与代问代答
 
 ## 1. 背景与目标
 
@@ -71,6 +71,8 @@ branch: feat/007-multi-answer-qa
 - 后端检查：
   - `ruff check`: PASS
   - `pytest backend/tests/qas/test_qa_schemas.py`: PASS (13/13 passed)
+  - `pytest backend/tests/integration/test_api_contract.py`: PASS（更新 OpenAPI 契约包含新增的 4 个 QA 回答与删除端点）
+  - `pytest backend/tests/integration/test_api_permissions.py`: PASS（同步更新权限测试：Family 角色允许参与回答，移出 Owner 专属拒绝列表）
 - 前端优化：
   - 去除说注文案，占位符调整为客观中立的 `输入回答...`，标签精简为 `回答`；
   - 重构回答卡片流，采用独立卡片容器 (`bg-card border-border/70 shadow-xs`)、头像首字母标示与左侧对齐排版，避免空旷表格感；
