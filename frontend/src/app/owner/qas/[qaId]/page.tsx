@@ -2,7 +2,7 @@ import { BackLink } from "@/components/navigation/back-link";
 import { notFound, redirect } from "next/navigation";
 
 import { AnswerForm } from "@/features/qas/answer-form";
-import { QAQuestionDetails } from "@/features/qas/qa-display";
+import { QADetail } from "@/features/qas/qa-display";
 import { getServerQA } from "@/features/qas/qa-server";
 import { ApiRequestError } from "@/lib/api/client";
 
@@ -17,7 +17,7 @@ export default async function OwnerQAAnswerPage({ params }: OwnerQAAnswerPagePro
   return (
     <section className="space-y-6">
       <BackLink href="/owner/qas">返回问答管理</BackLink>
-      <QAQuestionDetails qa={qa} />
+      <QADetail qa={qa} />
       <AnswerForm qa={qa} />
     </section>
   );

@@ -9,7 +9,7 @@ from sqlalchemy.engine import Engine
 def test_qa_migration_downgrades_to_posts_and_upgrades_to_head(
     test_engine: Engine,
 ) -> None:
-    """Verify the QA revision can be safely removed and restored in the test database."""
+    """Verify the QA revisions can be safely removed and restored in the test database."""
 
     config = Config("alembic.ini")
     config.cmd_opts = SimpleNamespace(x=["database=test"])
@@ -17,28 +17,41 @@ def test_qa_migration_downgrades_to_posts_and_upgrades_to_head(
 
     inspector = inspect(test_engine)
     assert "qas" not in inspector.get_table_names()
+    assert "qa_answers" not in inspector.get_table_names()
     assert "posts" in inspector.get_table_names()
 
     command.upgrade(config, "head")
     inspector = inspect(test_engine)
-    columns = {column["name"]: column for column in inspector.get_columns("qas")}
-    foreign_keys = inspector.get_foreign_keys("qas")
-    checks = inspector.get_check_constraints("qas")
-    indexes = inspector.get_indexes("qas")
+    qa_columns = {column["name"]: column for column in inspector.get_columns("qas")}
+    qa_answers_columns = {
+        column["name"]: column for column in inspector.get_columns("qa_answers")
+    }
+    qa_fks = inspector.get_foreign_keys("qas")
+    qa_answers_fks = inspector.get_foreign_keys("qa_answers")
+    qa_indexes = inspector.get_indexes("qas")
+    qa_answers_indexes = inspector.get_indexes("qa_answers")
 
     assert {
         "id",
         "asked_by",
         "question",
-        "answer",
-        "answered_by",
+        "is_proxy",
         "status",
-        "answered_at",
         "created_at",
         "updated_at",
-    }.issubset(columns)
-    assert columns["status"]["type"].length == 20
-    assert len(foreign_keys) == 2
-    assert all(key["options"].get("ondelete") == "RESTRICT" for key in foreign_keys)
-    assert any(check["name"] == "ck_qas_qa_answer_state_consistency" for check in checks)
-    assert any(index["name"] == "ix_qas_status_created_at" for index in indexes)
+    }.issubset(qa_columns)
+    assert {
+        "id",
+        "qa_id",
+        "author_id",
+        "content",
+        "is_proxy",
+        "created_at",
+        "updated_at",
+    }.issubset(qa_answers_columns)
+    assert any(fk["referred_table"] == "users" for fk in qa_fks)
+    assert any(fk["referred_table"] == "qas" for fk in qa_answers_fks)
+    assert any(index["name"] == "ix_qas_status_created_at" for index in qa_indexes)
+    assert any(
+        index["name"] == "ix_qa_answers_qa_created_at" for index in qa_answers_indexes
+    )

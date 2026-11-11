@@ -1,6 +1,7 @@
 import { BackLink } from "@/components/navigation/back-link";
 import { notFound, redirect } from "next/navigation";
 
+import { AnswerForm } from "@/features/qas/answer-form";
 import { QADetail } from "@/features/qas/qa-display";
 import { getServerQA } from "@/features/qas/qa-server";
 import { ApiRequestError } from "@/lib/api/client";
@@ -17,6 +18,7 @@ export default async function FamilyQADetailPage({ params }: FamilyQADetailPageP
     <section className="space-y-6">
       <BackLink href="/family/qas">返回问答列表</BackLink>
       <QADetail qa={qa} />
+      <AnswerForm qa={qa} />
     </section>
   );
 }

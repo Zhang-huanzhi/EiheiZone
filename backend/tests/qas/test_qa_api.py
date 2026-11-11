@@ -71,7 +71,7 @@ def test_qa_api_has_no_public_read_path_and_requires_authentication(client: Test
     assert public_response.status_code == 404
 
 
-def test_family_and_owner_question_owner_answer_and_family_wide_read_flow(
+def test_family_and_owner_question_and_multi_answers_flow(
     client: TestClient,
     test_session: Session,
 ) -> None:
@@ -83,59 +83,45 @@ def test_family_and_owner_question_owner_answer_and_family_wide_read_flow(
     created = client.post(
         "/api/v1/qas",
         headers={"Origin": ORIGIN, "X-CSRF-Token": family_a_csrf},
-        json={"question": "Can another family member read this?"},
+        json={"question": "Can another family member read and answer this?", "is_proxy": True},
     )
     assert created.status_code == 201
     qa_id = created.json()["id"]
     assert created.json()["status"] == "unanswered"
-    assert created.json()["answer"] is None
+    assert created.json()["is_proxy"] is True
+    assert created.json()["answers_count"] == 0
 
-    owner_csrf = login_with_csrf(client, owner_name)
-    owner_question = client.post(
-        "/api/v1/qas",
-        headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
-        json={"question": "Can the Owner also ask a question?"},
-    )
-    owner_qa_id = owner_question.json()["id"]
-    answered = client.put(
-        f"/api/v1/qas/{qa_id}/answer",
-        headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
-        json={"answer": "Yes, every Family user can read it."},
-    )
-    replaced = client.put(
-        f"/api/v1/qas/{qa_id}/answer",
-        headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
-        json={"answer": "Updated current answer."},
-    )
-
+    # Family B answers
     family_b_csrf = login_with_csrf(client, family_b_name)
-    family_list = client.get("/api/v1/qas")
-    family_detail = client.get(f"/api/v1/qas/{qa_id}")
-    family_cannot_answer = client.put(
-        f"/api/v1/qas/{qa_id}/answer",
+    family_b_answered = client.post(
+        f"/api/v1/qas/{qa_id}/answers",
         headers={"Origin": ORIGIN, "X-CSRF-Token": family_b_csrf},
-        json={"answer": "Not allowed"},
+        json={"content": "Yes, I can answer it too!", "is_proxy": True},
     )
-    qa_count = test_session.scalar(select(func.count()).select_from(QA))
+    assert family_b_answered.status_code == 201
+    assert family_b_answered.json()["status"] == "answered"
+    assert family_b_answered.json()["answers_count"] == 1
+    assert family_b_answered.json()["answers"][0]["is_proxy"] is True
 
-    assert owner_question.status_code == 201
-    assert owner_question.json()["status"] == "unanswered"
-    assert owner_question.json()["asked_by_display_name"] == "API Owner"
-    assert answered.status_code == 200
-    assert answered.json()["status"] == "answered"
-    assert answered.json()["answered_by_display_name"] == "API Owner"
-    assert replaced.status_code == 200
-    assert replaced.json()["id"] == qa_id
-    assert family_list.status_code == 200
-    assert family_list.json()["total"] == 2
-    assert {item["id"] for item in family_list.json()["items"]} == {qa_id, owner_qa_id}
-    assert any(
-        item["asked_by_display_name"] == "API Family A"
-        for item in family_list.json()["items"]
+    # Owner also answers
+    owner_csrf = login_with_csrf(client, owner_name)
+    owner_answered = client.post(
+        f"/api/v1/qas/{qa_id}/answers",
+        headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
+        json={"content": "Owner perspective added."},
     )
-    assert family_detail.json()["answer"] == "Updated current answer."
-    assert family_cannot_answer.status_code == 403
-    assert qa_count == 2
+    assert owner_answered.status_code == 201
+    assert owner_answered.json()["answers_count"] == 2
+
+    # Family A reads detail
+    family_a_csrf = login_with_csrf(client, family_a_name)
+    detail = client.get(f"/api/v1/qas/{qa_id}")
+    assert detail.status_code == 200
+    assert detail.json()["answers_count"] == 2
+    assert detail.json()["is_proxy"] is True
+
+    qa_count = test_session.scalar(select(func.count()).select_from(QA))
+    assert qa_count == 1
 
 
 def test_qa_writes_require_csrf_and_validate_text_fields(
@@ -162,25 +148,25 @@ def test_qa_writes_require_csrf_and_validate_text_fields(
     assert invalid_question.json()["error"]["field_errors"][0]["field"] == "body.question"
 
 
-def test_owner_answer_validates_fields_and_missing_resource(
+def test_answer_validates_fields_and_missing_resource(
     client: TestClient,
     test_session: Session,
 ) -> None:
     owner_name = create_account(test_session, UserRole.OWNER, "Validation Owner")
     owner_csrf = login_with_csrf(client, owner_name)
 
-    invalid_answer = client.put(
-        f"/api/v1/qas/{uuid4()}/answer",
+    invalid_answer = client.post(
+        f"/api/v1/qas/{uuid4()}/answers",
         headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
-        json={"answer": "\n\t"},
+        json={"content": "\n\t"},
     )
-    missing_qa = client.put(
-        f"/api/v1/qas/{uuid4()}/answer",
+    missing_qa = client.post(
+        f"/api/v1/qas/{uuid4()}/answers",
         headers={"Origin": ORIGIN, "X-CSRF-Token": owner_csrf},
-        json={"answer": "Valid answer"},
+        json={"content": "Valid answer"},
     )
 
     assert invalid_answer.status_code == 422
-    assert invalid_answer.json()["error"]["field_errors"][0]["field"] == "body.answer"
+    assert invalid_answer.json()["error"]["field_errors"][0]["field"] == "body.content"
     assert missing_qa.status_code == 404
     assert missing_qa.json()["error"]["code"] == "QA_NOT_FOUND"

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getCsrfToken } from "@/features/auth/auth-api";
-import { createQuestion, getQA, getQAs, upsertAnswer } from "@/features/qas/qa-api";
+import { addAnswer, createQuestion, getQA, getQAs, upsertAnswer } from "@/features/qas/qa-api";
 import { apiRequest } from "@/lib/api/client";
 
 vi.mock("@/features/auth/auth-api", () => ({ getCsrfToken: vi.fn() }));
@@ -25,29 +25,39 @@ describe("QA API", () => {
     expect(mockedApiRequest).toHaveBeenNthCalledWith(2, "/qas/qa-id", {});
   });
 
-  it("gets CSRF before Family POST and Owner PUT mutations", async () => {
+  it("gets CSRF before creating questions and answers", async () => {
     mockedGetCsrfToken.mockResolvedValue("csrf-token");
     mockedApiRequest.mockResolvedValue({});
 
-    await createQuestion({ question: "Question text" });
-    await upsertAnswer("qa-id", { answer: "Answer text" });
+    await createQuestion({ question: "Question text", is_proxy: true });
+    await addAnswer("qa-id", { content: "Answer text", is_proxy: true });
+    await upsertAnswer("qa-id", { answer: "Legacy answer" });
 
-    expect(mockedGetCsrfToken).toHaveBeenCalledTimes(2);
+    expect(mockedGetCsrfToken).toHaveBeenCalledTimes(3);
     expect(mockedApiRequest).toHaveBeenNthCalledWith(
       1,
       "/qas",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ question: "Question text" }),
+        body: JSON.stringify({ question: "Question text", is_proxy: true }),
         headers: expect.objectContaining({ "X-CSRF-Token": "csrf-token" }),
       }),
     );
     expect(mockedApiRequest).toHaveBeenNthCalledWith(
       2,
+      "/qas/qa-id/answers",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ content: "Answer text", is_proxy: true }),
+        headers: expect.objectContaining({ "X-CSRF-Token": "csrf-token" }),
+      }),
+    );
+    expect(mockedApiRequest).toHaveBeenNthCalledWith(
+      3,
       "/qas/qa-id/answer",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ answer: "Answer text" }),
+        body: JSON.stringify({ answer: "Legacy answer", is_proxy: false }),
         headers: expect.objectContaining({ "X-CSRF-Token": "csrf-token" }),
       }),
     );

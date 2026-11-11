@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.auth.models import UserRole
 from app.modules.auth.service import create_user
-from app.modules.qas.models import QA, QAStatus
+from app.modules.qas.models import QA, QAAnswer, QAStatus
 from app.modules.qas.repository import add_qa, get_qa, list_qas
 
 
@@ -32,20 +32,29 @@ def test_qa_repository_returns_all_questions_with_actors_and_stable_pagination(
     older = QA(
         asked_by=family_a.id,
         question="Older question",
+        is_proxy=True,
         created_at=now - timedelta(minutes=1),
         updated_at=now - timedelta(minutes=1),
     )
     answered = QA(
         asked_by=family_b.id,
         question="New answered question",
-        answer="Current answer",
-        answered_by=owner.id,
         status=QAStatus.ANSWERED,
-        answered_at=now,
         created_at=now,
         updated_at=now,
     )
     test_session.add_all([older, answered])
+    test_session.flush()
+
+    ans = QAAnswer(
+        qa_id=answered.id,
+        author_id=owner.id,
+        content="Current answer",
+        is_proxy=True,
+        created_at=now,
+        updated_at=now,
+    )
+    test_session.add(ans)
     test_session.flush()
 
     items, total = list_qas(test_session, offset=0, limit=1)
@@ -55,8 +64,9 @@ def test_qa_repository_returns_all_questions_with_actors_and_stable_pagination(
     assert [qa.id for qa in items] == [answered.id]
     assert loaded is not None
     assert loaded.asker.display_name == "Repository Family B"
-    assert loaded.answerer is not None
-    assert loaded.answerer.display_name == "Repository Owner"
+    assert len(loaded.answers) == 1
+    assert loaded.answers[0].author.display_name == "Repository Owner"
+    assert loaded.answers[0].is_proxy is True
 
 
 def test_add_qa_leaves_commit_to_service(test_session: Session) -> None:

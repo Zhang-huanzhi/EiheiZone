@@ -41,18 +41,71 @@ export async function createQuestion(input: QACreateInput): Promise<QARecord> {
       "Content-Type": "application/json",
       "X-CSRF-Token": csrfToken,
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      question: input.question,
+      is_proxy: input.is_proxy ?? false,
+    }),
+  });
+}
+
+export async function addAnswer(qaId: string, input: QAAnswerInput): Promise<QARecord> {
+  const csrfToken = await getCsrfToken();
+  const content = input.content ?? input.answer ?? "";
+  return apiRequest<QARecord>(`/qas/${qaId}/answers`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken,
+    },
+    body: JSON.stringify({
+      content,
+      is_proxy: input.is_proxy ?? false,
+    }),
   });
 }
 
 export async function upsertAnswer(qaId: string, input: QAAnswerInput): Promise<QARecord> {
   const csrfToken = await getCsrfToken();
+  const answer = input.answer ?? input.content ?? "";
   return apiRequest<QARecord>(`/qas/${qaId}/answer`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       "X-CSRF-Token": csrfToken,
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      answer,
+      is_proxy: input.is_proxy ?? false,
+    }),
+  });
+}
+
+export async function updateAnswer(
+  qaId: string,
+  answerId: string,
+  input: QAAnswerInput,
+): Promise<QARecord> {
+  const csrfToken = await getCsrfToken();
+  const content = input.content ?? input.answer ?? "";
+  return apiRequest<QARecord>(`/qas/${qaId}/answers/${answerId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken,
+    },
+    body: JSON.stringify({
+      content,
+      is_proxy: input.is_proxy ?? false,
+    }),
+  });
+}
+
+export async function deleteAnswer(qaId: string, answerId: string): Promise<QARecord> {
+  const csrfToken = await getCsrfToken();
+  return apiRequest<QARecord>(`/qas/${qaId}/answers/${answerId}`, {
+    method: "DELETE",
+    headers: {
+      "X-CSRF-Token": csrfToken,
+    },
   });
 }
