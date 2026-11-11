@@ -19,10 +19,11 @@ type PostImageEditorProps = {
 
 export function PostImageEditor({ images, onMove, onRemove }: PostImageEditorProps) {
   const draggedIndex = useRef<number | null>(null);
-  if (images.length === 0) return null;
+  const displayImages = images.slice(0, 9);
+  if (displayImages.length === 0) return null;
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      {images.map((image, index) => (
+      {displayImages.map((image, index) => (
         <div
           className="space-y-2"
           draggable
@@ -52,13 +53,15 @@ export function PostImageEditor({ images, onMove, onRemove }: PostImageEditorPro
 
 export function PostImages({ images = [], interactive = true }: PostImagesProps) {
   const [active, setActive] = useState<number | null>(null);
-  if (images.length === 0) return null;
-  const columns = images.length === 1 ? 1 : images.length <= 4 ? 2 : 3;
+  const displayImages = images.slice(0, 9);
+  if (displayImages.length === 0) return null;
+  const count = displayImages.length;
+  const columns = count === 1 ? 1 : count === 2 || count === 4 ? 2 : 3;
 
   return (
     <>
       <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
-        {images.map((image, index) => interactive ? (
+        {displayImages.map((image, index) => interactive ? (
           <button aria-label={`查看第 ${index + 1} 张图片`} className="relative aspect-square overflow-hidden rounded-md bg-muted" key={image.id} onClick={() => setActive(index)} type="button">
             <PostImage image={image} />
           </button>
@@ -69,7 +72,7 @@ export function PostImages({ images = [], interactive = true }: PostImagesProps)
         ))}
       </div>
       {active !== null ? (
-        <ImageViewer images={images} index={active} onClose={() => setActive(null)} onSelect={setActive} />
+        <ImageViewer images={displayImages} index={active} onClose={() => setActive(null)} onSelect={setActive} />
       ) : null}
     </>
   );

@@ -152,7 +152,7 @@ def attach_images(db: Session, *, user: User, post: Post, image_ids: list[UUID])
         raise AppError(
             status_code=400,
             code="INVALID_IMAGE_LIST",
-            message="A Post may contain at most 9 unique images",
+            message=f"近况动态最多包含 {MAX_IMAGES} 张图片，且不能重复",
         )
     if not image_ids:
         return
@@ -169,14 +169,14 @@ def attach_images(db: Session, *, user: User, post: Post, image_ids: list[UUID])
         raise AppError(
             status_code=400,
             code="INVALID_IMAGE_LIST",
-            message="One or more images are unavailable",
+            message="所选图片不存在或无权访问",
         )
     by_id = {image.id: image for image in images}
     if sum(image.file_size for image in images) > MAX_TOTAL_SIZE:
         raise AppError(
             status_code=400,
             code="IMAGE_TOTAL_TOO_LARGE",
-            message="Post images must total 60 MB or less",
+            message="近况动态图片总大小不能超过 60 MB",
         )
     for position, image_id in enumerate(image_ids):
         image = by_id[image_id]
@@ -195,7 +195,7 @@ def replace_post_images(
     """Replace a Post's ordered image list and return detached images for cleanup."""
 
     if len(image_ids) > MAX_IMAGES or len(set(image_ids)) != len(image_ids):
-        raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message="A Post may contain at most 9 unique images")
+        raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message=f"近况动态最多包含 {MAX_IMAGES} 张图片，且不能重复")
     current = {image.id: image for image in post.images if image.status is PostImageStatus.ATTACHED}
     if not image_ids and not current:
         return []
@@ -209,13 +209,13 @@ def replace_post_images(
         )
     ) if image_ids else []
     if len(requested) != len(image_ids):
-        raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message="One or more images are unavailable")
+        raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message="所选图片不存在或无权访问")
     by_id = {image.id: image for image in requested}
     for image in requested:
         if image.status is PostImageStatus.PENDING and image.owner_id != user.id:
-            raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message="One or more images are unavailable")
+            raise AppError(status_code=400, code="INVALID_IMAGE_LIST", message="所选图片不存在或无权访问")
     if sum(image.file_size for image in requested) > MAX_TOTAL_SIZE:
-        raise AppError(status_code=400, code="IMAGE_TOTAL_TOO_LARGE", message="Post images must total 60 MB or less")
+        raise AppError(status_code=400, code="IMAGE_TOTAL_TOO_LARGE", message="近况动态图片总大小不能超过 60 MB")
     detached = [image for image_id, image in current.items() if image_id not in by_id]
     for image in detached:
         image.post = None

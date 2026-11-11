@@ -73,6 +73,10 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
     }
 
     const errors = validate();
+    if (draftImages.length > MAX_IMAGES) {
+      setFormError(`近况动态最多支持 ${MAX_IMAGES} 张图片。`);
+      return;
+    }
     setFieldErrors(errors);
     setFormError(null);
     if (Object.keys(errors).length > 0) {
@@ -128,8 +132,15 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
           setFormError("这条近况已不存在。 ");
         } else if (error.status === 422) {
           setFieldErrors(toFieldErrors(error));
-          setFormError("请检查标记的字段。 ");
-        } else if (error.status === 400 && (error.code === "INVALID_IMAGE" || error.code === "IMAGE_TOO_LARGE")) {
+          const imageError = error.fieldErrors.find((fe) => fe.field.includes("image_ids"));
+          setFormError(imageError ? `图片验证失败：${imageError.message}` : "请检查标记的字段。 ");
+        } else if (
+          error.status === 400 &&
+          (error.code === "INVALID_IMAGE" ||
+            error.code === "IMAGE_TOO_LARGE" ||
+            error.code === "INVALID_IMAGE_LIST" ||
+            error.code === "IMAGE_TOTAL_TOO_LARGE")
+        ) {
           setFormError(error.message);
         } else {
           setFormError("暂时无法保存，请重试。 ");
@@ -159,22 +170,28 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
         {fieldErrors.title ? <p className="text-sm text-destructive" id="post-title-error">{fieldErrors.title}</p> : null}
       </div>
       <div className="space-y-2">
+        <div className="flex items-center justify-between">
           <label className="text-sm font-medium" htmlFor="post-images">图片（最多 9 张）</label>
+          <span className="text-xs text-muted-foreground">{draftImages.length} / {MAX_IMAGES}</span>
+        </div>
           <input
             accept={IMAGE_ACCEPT_ATTR}
-            className="block w-full text-sm"
+            className="block w-full text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={draftImages.length >= MAX_IMAGES}
             id="post-images"
             multiple
             onChange={(event) => {
               const files = Array.from(event.target.files ?? []);
               if (draftImages.length + files.length > MAX_IMAGES) {
-                setFormError("最多选择 9 张图片。");
+                setFormError(`近况动态最多支持 9 张图片（当前已选 ${draftImages.length} 张，本次选择了 ${files.length} 张，已超出上限）。`);
+                event.target.value = "";
                 return;
               }
               for (const file of files) {
                 const validationError = validateImageFile(file);
                 if (validationError) {
                   setFormError(validationError);
+                  event.target.value = "";
                   return;
                 }
               }
@@ -190,10 +207,15 @@ export function PostForm({ initialPost, redirectPath = "/owner/posts" }: PostFor
                   file,
                 })),
               ]);
+              event.target.value = "";
             }}
             type="file"
           />
-          <p className="text-xs text-muted-foreground">{IMAGE_UPLOAD_HINT}</p>
+          {draftImages.length >= MAX_IMAGES ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400">已达到 9 张图片上限，如需添加请先删除已有图片。</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">{IMAGE_UPLOAD_HINT}</p>
+          )}
           {draftImages.length ? (
             <>
               <p className="text-sm text-muted-foreground">当前共有 {draftImages.length} 张图片，可调整顺序或删除。</p>
